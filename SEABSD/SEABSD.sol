@@ -31,7 +31,7 @@
  * - {FATTO} (f16) crea un meccanismo di deposito a garanzia generico e consente all'amministratore di arbitrare un contratto arbit
  * 
  * Before you deploy:
- * - Change CONFIG:hardcoded definitions according to this crypto-panarchy terms.
+ * - Change CONFIG:hardcoded definitions according to this crypto-panarchy immutable terms.
  * - Change wallet_health initial address.
  **/
 
@@ -66,22 +66,29 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         uint256 spOptOutArbitrations; // only arbitrators should set this
         address[] ostracizedBy; // court or judge
         uint256 sRole; // 0=user, 1=judge/court/arbitrator
+        // private agreements
+        uint256[] spYouAgreementsSigned;
     }
     struct subContractProperties {
         string hash;
+        string gecos; // generic comments describing the contract
+        string url; // 
         uint256 fine;
-        uint256 deposit; // uint instead of bool to save gwei
+        uint256 deposit; // uint instead of bool to save gwei, 1 = required
         address creator;
         uint256 createdOn;
         address arbitrator; // private court or selected judge
         mapping (address => uint256) signedOn; // signees and timestamp
         mapping (address => string) signedHash;
         mapping (address => string) signComment;
-        uint256 finePaid; // bool->uint to save gas
+        mapping (address => uint256) finePaid; // bool->uint to save gas
+        mapping (address => uint256) state; // 1=active/signed, 2=want_friendly_terminate, 3=want_dispute, 4=won_dispute, 5=lost_dispute, 21=friendly_withdrawaled, 41=disputed_wdled 99=disputed_outside(ostracized)
+        address[] signees; // list of who signed this contract
     }
     
     mapping (address => selfProperties) private _selfDetermined;
-    mapping (uint256 => subContractProperties) private _privLawAgreement;
+    mapping (uint256 => subContractProperties) public _privLawAgreement;
+    uint256[] private _privLawAgreementIDs;
     
     //OLD version mapping (address => mapping (address => uint256)) private _selfDeterminedFees;// = [_taxFee, _liquidityFee, _healthFee];
     // _rOwned e _tOwned melhores praticas do SM (conformidade com OpenZeppelin tbm)
@@ -96,7 +103,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
  
     uint256 private constant _decimals = 8; // Auditoria XFC-05: constante
     uint256 private constant MAX = ~uint256(0);
-    uint256 private constant _tTotal = 18570418 * 10**_decimals; // 100 milhoes Auditoria XFC-05: constante + decimals precisao cientifica pq das matematicas zoadas do sol
+    uint256 private constant _tTotal = 29092909 * 10**_decimals; // 2909 2909 milhoes Auditoria XFC-05: constante + decimals precisao cientifica pq das matematicas zoadas do sol
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
  
@@ -124,8 +131,8 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     bool inSwapAndLiquify; // liga e desliga o mecanismo de liquidez
     bool public swapAndLiquifyEnabled = false; // inicializa
  
-    uint256 public _maxTxAmount = 185700 * 10**_decimals; // mandei 185.7k max transfer que da 1% do supply inicial (nao do circulante, logo isso muda com o tempo)
-    uint256 private numTokensSellToAddToLiquidity = 185 * 10**_decimals; // 185 minimo de tokens pra adicionar na LP se estiver abaixo
+    uint256 public _maxTxAmount = 290900 * 10**_decimals; // mandei 290.9k max transfer que da 1% do supply inicial (nao do circulante, logo isso muda com o tempo)
+    uint256 private numTokensSellToAddToLiquidity = 2909 * 10**_decimals; // 2909 minimo de tokens pra adicionar na LP se estiver abaixo
  
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled); // liga
@@ -304,7 +311,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
  
-    //recebe ETH/BNB/BCH do uniswapV2Router quando fizer swap - Auditoria: XFC-07
+    //recebe XMR/ETH/BNB/BCH do uniswapV2Router quando fizer swap - Auditoria: XFC-07
     receive() external payable {}
  
     // subtrai rTotal e soma fee no fee tFeeTotal (f2)
@@ -448,11 +455,11 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         uint256 half = contractTokenBalance.div(2);
         uint256 otherHalf = contractTokenBalance.sub(half);
  
-        // computa apenas os ETH/BNB/BCH da transacao, excetuando o que eventualmente ja houver no contrato
+        // computa apenas os XMR/ETH/BNB/BCH da transacao, excetuando o que eventualmente ja houver no contrato
         uint256 initialBalance = address(this).balance;
  
         // metade do saldo em crypto
-        swapTokensForEth(half); // <- this breaks the ETH -> TOKEN (HATE) swap when swap+liquify is triggered
+        swapTokensForEth(half); // <- this breaks the ETH -> TOKEN swap when swap+liquify is triggered
  
         // saldo atual em crypto
         uint256 newBalance = address(this).balance.sub(initialBalance);
@@ -746,7 +753,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
                 
             _selfDetermined[_youTrust].spTrustYou.push(_msgSender()); // inform the party you trust him
         }
-        return(_selfDetermined[_msgSender()].sYouTrust.length); // debug
+        return(_selfDetermined[_msgSender()].sYouTrust.length); // extra useful info
     }
     
     // T:OK (f13)
@@ -761,52 +768,178 @@ contract SEABSDv5 is Context, IERC20, Ownable {
             address[] memory _youTrust,
             uint256 _youTrustCount,
             address[] memory _theyTrustU,
-            uint256 _theyTrustUcount
+            uint256 _theyTrustUcount,
+            uint256[] memory _youAgreementsSigned
             ) {
         return (
             _selfDetermined[_who].spFirstTrustee,
             _selfDetermined[_who].sYouTrust,
             _selfDetermined[_who].sYouTrust.length,
             _selfDetermined[_who].spTrustYou,
-            _selfDetermined[_who].spTrustYou.length
+            _selfDetermined[_who].spTrustYou.length,
+            _selfDetermined[_who].spYouAgreementsSigned
         );
     }
     /**
-     * In a private law society individuals shall agree vountarily to contracted services and exchanges
-     * and thus, they shall agree on exit clause fines whether applicable, if deposit shall be paid in
-     * advance or parties will agree to pay upon agreement termination. A private law court or selected
-     * judge shall be selected as arbitrators by all parties in a common agreement. A dispute shall be
-     * initiated by parties who signed the contract. Dispute is triggered, only the arbitrator shall
-     * decide upon the reasons. Wrongdoing violators will pay the fine to all other parties, and contract
-     * violation shall be incremented by arbitrator. No dispute is initiated, parties shall agree 
-     * upon agreement dissolution. Agreement is dissolved, all signees get deposited fines back.
-     * In a crypto-panarchy society, private court arbitration shall be coded. Cypherpunks write code.
+     * In una società di diritto privato gli individui acconsentono volontariamente ai servizi e agli scambi appaltati
+     * e quindi, devono concordare le clausole di uscita ammende, se applicabili, se il deposito deve essere versato in
+     * anticipo o le parti concorderanno di pagare alla risoluzione del contratto. Un tribunale di diritto privato o selezionato
+     * il giudice deve essere scelto come arbitri da tutte le parti di comune accordo. Una controversia deve essere
+     * avviato dalle parti che hanno firmato il contratto. Viene avviata una controversia, solo l'arbitro deve
+     * decidere sui motivi. I trasgressori illeciti pagheranno la multa a tutte le altre parti e contrarranno
+     * la violazione sarà incrementata dall'arbitro. Non viene avviata alcuna controversia, le parti sono d'accordo
+     * in caso di scioglimento dell'accordo. L'accordo viene sciolto, tutti i firmatari vengono rimborsati delle multe.
+     * In una società cripto-panarchica, l'arbitrato del tribunale privato deve essere codificato. I Cypherpunk scrivono codice.
      * 
-     * XXX_Pend: testar a funcao abaixo. Codificar todos os outros procedimentos.
-     * T:PEND (f9)
+     * XXX_Pend: Codificar todos os outros procedimentos: arbitragem, pontuacao, saque
+     * T:OK (f9)
      **/
-    function setAgreement(uint256 _id, string memory _hash, string memory _signedHash, uint256 _fine, address _arbitrator, uint256 _deposit, string memory _signComment) public {
-        require(_id>0,"AuthZ: ivalid id for private agreement");
+     // T:OK
+    function setAgreement(uint256 _aid, string memory _hash, string memory _gecos, string memory _url, string memory _signedHash, uint256 _fine, address _arbitrator, uint256 _deposit, string memory _signComment,uint256 _sign) public {
+        require(_aid>0,"AuthZ: ivalid id for private agreement");
         require(_selfDetermined[_arbitrator].sRole==1,"AuthZ: appointed arbitrator must set himself as Role=1");
-        if(_privLawAgreement[_id].creator==address(0)) { // doesnt exist, create it
-            _privLawAgreement[_id].hash=_hash;
-            _privLawAgreement[_id].fine=_fine;
-            _privLawAgreement[_id].deposit=_deposit;
-            _privLawAgreement[_id].creator=msg.sender;
-            _privLawAgreement[_id].arbitrator=_arbitrator;
-            _privLawAgreement[_id].createdOn=block.timestamp;
+        if(_privLawAgreement[_aid].creator==address(0)) { // doesnt exist, create it
+            _privLawAgreement[_aid].hash=_hash;
+            _privLawAgreement[_aid].gecos=_gecos;
+            _privLawAgreement[_aid].url=_url;
+            _privLawAgreement[_aid].fine=_fine;
+            _privLawAgreement[_aid].deposit=_deposit; // 1 = required
+            _privLawAgreement[_aid].creator=msg.sender;
+            _privLawAgreement[_aid].arbitrator=_arbitrator;
+            _privLawAgreement[_aid].createdOn=block.timestamp;
+            _privLawAgreementIDs.push(_aid);
         } else {
-            require(_fine==_privLawAgreement[_id].fine,"AuthZ: fine value mismatch");
-            require(keccak256(abi.encode(_hash))==keccak256(abi.encode(_privLawAgreement[_id].hash)),"AuthZ: you must reaffirm original hash acceptance");
-            _privLawAgreement[_id].fine=_fine;
-            _privLawAgreement[_id].signedOn[msg.sender]=block.timestamp;
-            _privLawAgreement[_id].signedHash[msg.sender]=_signedHash;
-            _privLawAgreement[_id].signComment[msg.sender]=_signComment;
-            if (_privLawAgreement[_id].finePaid==0 && _privLawAgreement[_id].deposit==1) { // must deposit fine in advance in this contract
-                _transfer(msg.sender,address(this),_fine); // deposit fine to this contract
-                _privLawAgreement[_id].finePaid=1;
+            require(_fine==_privLawAgreement[_aid].fine,"AuthZ: fine value mismatch");
+            require(keccak256(abi.encode(_hash))==keccak256(abi.encode(_privLawAgreement[_aid].hash)),"AuthZ: you must reaffirm original hash acceptance");
+            require(msg.sender!=_arbitrator,"AuthZ: arbitrator can not take part of the agreement");
+            require(_sign==1,"AuthZ: agreement ID exists, you need to explicitly consent to sign it");
+            _privLawAgreement[_aid].fine=_fine;
+            _privLawAgreement[_aid].signedOn[msg.sender]=block.timestamp;
+            _privLawAgreement[_aid].signedHash[msg.sender]=_signedHash;
+            _privLawAgreement[_aid].signComment[msg.sender]=_signComment;
+            if (_privLawAgreement[_aid].finePaid[msg.sender]==0 && _privLawAgreement[_aid].deposit==1) { // must deposit fine in advance in this contract
+                require(balanceOf(_msgSender()) >= _fine,"ERC20: balance below required fine amount, cant sign agreement");
+                    transfer(address(this), _fine); // transfer fine deposit to contract T:BUG
+                    //_transfer(_msgSender(), recipient, amount);
+                _privLawAgreement[_aid].finePaid[msg.sender]=1;
             }
+            _selfDetermined[msg.sender].spYouAgreementsSigned.push(_aid);
+            _privLawAgreement[_aid].signees.push(msg.sender);
+            _privLawAgreement[_aid].state[msg.sender]=1; // mark active
+            
         }
     }
+    // T:OK
+    function getAgreementIdsList() public view returns (uint256[] memory _privLawAgreementIdsList) { return(_privLawAgreementIDs); }
+    // T:OK
+    function getAgreement(uint256 _aid) public view returns (
+        string memory _hash,
+        string memory,
+        uint256 _fine,
+        uint256 _deposit,
+        address _creator,
+        uint256 _createdOn,
+        address _arbitrator
+        ) {
+        require(_privLawAgreement[_aid].creator!=address(0),"AuthZ: agreement ID is nonexistant");
+        return(
+            _privLawAgreement[_aid].hash,
+            string(abi.encodePacked("_gecos ",_privLawAgreement[_aid].gecos," _url ",_privLawAgreement[_aid].url)),
+            _privLawAgreement[_aid].fine,
+            _privLawAgreement[_aid].deposit,
+            _privLawAgreement[_aid].creator,
+            _privLawAgreement[_aid].createdOn,
+            _privLawAgreement[_aid].arbitrator
+        );
+    }
+    // T:OK:Allows one to get someones termos to agreement aid
+    function getAgreementData(uint256 _aid, address _who) public view returns (
+        string memory,
+        uint256 _fine,
+        uint256 _signedOn,
+        address _arbitrator,
+        uint256 _finePaid,
+        uint256 _state
+        ) {
+        require(_privLawAgreement[_aid].signedOn[_who]!=0,"AuthZ: this x-persona did not sign this agreement ID");
+        return(
+            string(abi.encodePacked("_hash ",_privLawAgreement[_aid].hash,
+                " _signedHash ",_privLawAgreement[_aid].signedHash[_who],
+                " _signComment ",_privLawAgreement[_aid].signComment[_who]
+                )),
+            _privLawAgreement[_aid].fine,
+            _privLawAgreement[_aid].signedOn[_who],
+            _privLawAgreement[_aid].arbitrator,
+            _privLawAgreement[_aid].finePaid[_who],
+            _privLawAgreement[_aid].state[_who]
+        );
+    }
+    // XXX_Pend: continuar daqui
+    // T:PEND
+    function _vai(uint256 _aid) public {
+        _privLawAgreement[_aid].signees.push(0xD1E1aF95A1Fb9000c0fEe549cD533903DaB8f715);
+        _privLawAgreement[_aid].signees.push(0x37bB9cC8bf230f5bB11eDC20894d091943f3FdCE);
+        _privLawAgreement[_aid].signees.push(0x3644B986B3F5Ba3cb8D5627A22465942f8E06d09);
+        _privLawAgreement[_aid].signees.push(0x000000000000000000000000000000000000dEaD);
+        _privLawAgreement[_aid].state[0xD1E1aF95A1Fb9000c0fEe549cD533903DaB8f715]=2;
+        _privLawAgreement[_aid].state[0x37bB9cC8bf230f5bB11eDC20894d091943f3FdCE]=2;
+        _privLawAgreement[_aid].state[0x3644B986B3F5Ba3cb8D5627A22465942f8E06d09]=_aid;
+        _privLawAgreement[_aid].state[0x000000000000000000000000000000000000dEaD]=2;
+    }
+    //T:OK:Allows one to get all signees to a given agreement id
+    function getAgreementSignees(uint256 _aid) public view returns(address[] memory _signees) {
+        return (_privLawAgreement[_aid].signees);
+    }
+    //T:OK:Allow to test if agreement is settled peacefully or not. Returns the first who did not agree if not settled. 
+    function isSettledAgreement(uint256 _aid) public view returns(bool, address _who) {
+        address _whod;
+        for (uint256 n=0; n<_privLawAgreement[_aid].signees.length;n++) {
+            _whod = _privLawAgreement[_aid].signees[n];
+            if (_privLawAgreement[_aid].state[_whod]!=2)
+                return (false,_whod);
+        }
+        return (true,address(0));
+    }
+    //T:OK:A non public version of the previous function, for testing and not informational
+    function _isSettledAgreement(uint256 _aid) private view returns(bool) {
+        address _whod;
+        for (uint256 n=0; n<_privLawAgreement[_aid].signees.length;n++) {
+            _whod = _privLawAgreement[_aid].signees[n];
+            if (_privLawAgreement[_aid].state[_whod]!=2)
+                return (false);
+        }
+        return (true);
+    }
+    //T:PEND:Allows withdrawal of deposit if agreement is settled or has been arbitrated
+    function wdAgreement(uint256 _aid) public {
+        require(_privLawAgreement[_aid].deposit==1 && _privLawAgreement[_aid].finePaid[msg.sender]==1,"Withdrawal: you never paid deposit for this agreement id");
+        uint256 value = _privLawAgreement[_aid].fine;
+        //require(value>0,"Withdrawal: deposit fine for this agreement was 0, contact arbitrator our administration."); // should never triggered 
+        require(balanceOf(address(this))>=value,"Withdrawal: contract balance is too low, please have someone (arbitrator or crypto-panarchy administration) fund this contract");
+        require((_privLawAgreement[_aid].state[_msgSender()]==4 || _isSettledAgreement(_aid)),"Withdrawal: sorry, agreement is neither settled or arbitrated to your favor");
+
+        /** Precisa definir o valor. Possibile logica aziendale:
+         * - se for settlement amigavel, devolve o que pagou, paga fee, mark 21
+         * - se for disputa arbitrada mark 41
+         *      - saca o dobro se for um acordo com apenas duas partes, desconta taxa de arbitragem
+         *      - descobre os perdedores P, descobre o total de perdedores tP divide pelo total de signatararios s, desconta arbitragem e paga a divisao
+         *          - saque = (tP / s)*D/(s-tP)-f
+         *              onde
+         *                  tp = total de perdedores da disputa (ie 2)
+         *                  s = total de signees (ie 10)
+         *                  D = fine depositada (ie 60)
+         *                  f = tazza de arbitragem (ie 0,2)
+         *          - ∴ saque = (2/10)*60/(10-2)-0,2
+         *      - arbitragem define outro valor? melhor nao. nel codice, ci fidiamo.
+         * - pagamento da fee de arbitragem apenas sobre saques individuais
+         *  - fee de arbitragem hardcoded no contrato (imutavel)
+         **/
+         
+        uint256 wdValue=10;
+        _approve(address(this), msg.sender, wdValue);
+        _transfer(address(this), msg.sender, wdValue);
+    }
+    
+    
  
-}
+} // EST FINITO
