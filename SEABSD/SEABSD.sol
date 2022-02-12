@@ -13,6 +13,7 @@
  * v0.5.2 coded private court arbitration under policentric law model inspired by Tracanelli-Bell prov arbitration model
  * v0.5.3 added hash based signature to private agreements
  * v0.5.4 wdAgreement implemented, however EVM contract size is too large, reduced optimizations run as low as 50
+ * v0.5.5 refactored contract due to size limit (added a library, merged functions, converted public, shortened err messages, etc)
  * 
  * XXXTODO (Feature List F#):
  * - {DONE} (f1) taxationMechanisms: HOA-like, convenant community (Hoppe), Tax=Theft (Rothbard), Voluntary Taxation (Objectivism)
@@ -81,19 +82,20 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         address creator;
         uint256 createdOn;
         address arbitrator; // private court or selected judge
+        uint256 arbitratorFee; // in tokens
         mapping (address => uint256) signedOn; // signees and timestamp
         mapping (address => string) signedHash;
         mapping (address => string) signComment;
         mapping (address => bytes32) signature;
         mapping (address => uint256) signatureNonce;
         mapping (address => uint256) finePaid; // bool->uint to save gas
-        mapping (address => uint256) state; // 1=active/signed, 2=want_friendly_terminate, 3=want_dispute, 4=won_dispute, 5=lost_dispute, 21=friendly_withdrawaled, 41=disputed_wdled 99=disputed_outside(ostracized)
+        mapping (address => uint256) state; // 1=active/signed, 2=want_friendly_terminate, 3=want_dispute, 4=won_dispute, 5=lost_dispute, 21=friendly_withdrawaled, 41=disputed_wdled, 91=arbitrator_wdled 99=disputed_outside(ostracized)
         address[] signees; // list of who signed this contract
     }
     
     mapping (address => selfProperties) private _selfDetermined;
-    mapping (uint256 => subContractProperties) public _privLawAgreement;
-    uint256[] private _privLawAgreementIDs;
+    mapping (uint256 => subContractProperties) private _privLawAgreement;
+    uint256[] public _privLawAgreementIDs;
     
     //OLD version mapping (address => mapping (address => uint256)) private _selfDeterminedFees;// = [_taxFee, _liquidityFee, _healthFee];
     // _rOwned e _tOwned melhores praticas do SM (conformidade com OpenZeppelin tbm)
@@ -104,44 +106,44 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     mapping (address => bool) private _isExcludedR; // marca essa flag na wallet que nao recebe dividendos
     address[] private _excluded;
     
-    address public wallet_health = 0x8c348A2a5Fd4a98EaFD017a66930f36385F3263A; //owner(); // Mudar para wallet health
+    address private wallet_health = 0x8c348A2a5Fd4a98EaFD017a66930f36385F3263A; //owner(); // Mudar para wallet health
+    mapping (address => uint256) public healthDepositTracker; // (f8) track who deposits to bealth
  
-    uint256 private constant _decimals = 8; // Auditoria XFC-05: constante
+    uint8 private constant _decimals = 8; // Auditoria XFC-05: constante
     uint256 private constant MAX = ~uint256(0);
     uint256 private constant _tTotal = 29092909 * 10**_decimals; // 2909 2909 milhoes Auditoria XFC-05: constante + decimals precisao cientifica pq das matematicas zoadas do sol
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
  
-    string private constant _name = "Coin 0xFF4"; // Auditoria XFC-05: constante
+    string private constant _name = "SeaBSD"; // Auditoria XFC-05: constante
     string private constant _symbol = "SEABSD"; //Auditoria XFC-05: constante
  
     uint256 private _maxTassazione = 8; // tassazione mass hello Trieste Friulane (CONFIG:hardcoded)
-    uint256 public _taxFee = 1; // taxa pra dividendos
+    uint256 private _taxFee = 1; // taxa pra dividendos
     uint256 private _previousTaxFee = _taxFee; // inicializa
  
-    uint256 public _liquidityFee = 1; // taxa pra LP
+    uint256 private _liquidityFee = 1; // taxa pra LP
     uint256 private _previousLiquidityFee = _liquidityFee; // inicializa
  
-    uint256 public _burnFee = 1; // taxa de burn (deflacao) por operacao estrategia de deflacao continua (f3)
+    uint256 private _burnFee = 1; // taxa de burn (deflacao) por operacao estrategia de deflacao continua (f3)
     uint256 private _previousBurnFee = _burnFee; // inicializa (f3)
     
-    uint256 public _healthFee = 1; // Em porcentagem, fee direto pra health
-    uint256 public _prevHealthFee = _healthFee; // Em porcentagem, fee direto pra health
-    
-    uint256[] private _individualFee = [_taxFee, _liquidityFee, _healthFee];
+    uint256 private _healthFee = 1; // Em porcentagem, fee direto pra health
+    uint256 private _prevHealthFee = _healthFee; // Em porcentagem, fee direto pra health
  
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
  
     bool inSwapAndLiquify; // liga e desliga o mecanismo de liquidez
-    bool public swapAndLiquifyEnabled = false; // inicializa
+    bool private swapAndLiquifyEnabled = false; // inicializa
  
-    uint256 public _maxTxAmount = 290900 * 10**_decimals; // mandei 290.9k max transfer que da 1% do supply inicial (nao do circulante, logo isso muda com o tempo)
+    uint256 private _maxTxAmount = 290900 * 10**_decimals; // mandei 290.9k max transfer que da 1% do supply inicial (nao do circulante, logo isso muda com o tempo)
     uint256 private numTokensSellToAddToLiquidity = 2909 * 10**_decimals; // 2909 minimo de tokens pra adicionar na LP se estiver abaixo
  
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled); // liga
     event SwapAndLiquify(uint256 tokensSwapped, uint256 ethReceived, uint256 tokensIntoLiqudity);
+    event AuthZ(uint256 _reason);
 
     modifier travaSwap { 
         inSwapAndLiquify = true;
@@ -162,8 +164,11 @@ contract SEABSDv5 is Context, IERC20, Ownable {
      * 
     **/
     modifier notPhysicallyRemoved() {
-        require(_selfDetermined[_msgSender()].spOptOutArbitrations < 1, "AuthZ: ostracized");
+        _notPhysicallyRemoved();
         _;
+    }
+    function _notPhysicallyRemoved() internal view {
+        require(_selfDetermined[_msgSender()].spOptOutArbitrations < 1, "A2: ostracized"); // ostracized
     }
  
     constructor () {
@@ -242,7 +247,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     // Implementar na Web3 um mecanismo pra facilitar uso. (f2)
     function wdSaque(uint256 tQuantia) public notPhysicallyRemoved() {
         address remetente = _msgSender();
-        require(!_isExcludedR[remetente], "Excluded addresses can not call this function");
+        require(!_isExcludedR[remetente], "A2: ur excluded"); // Excluded address can not call this function
         (uint256 rAmount,,,,,) = _getValues(tQuantia);
         _rOwned[remetente] = _rOwned[remetente].sub(rAmount);
         _rTotal = _rTotal.sub(rAmount);
@@ -252,7 +257,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     // To calculate the token count much more precisely, you convert the token amount into another unit.
     // This is done in this helper function: "reflectionFromToken()". Code came from Reflect Finance project. (f2)
     function reflectionFromToken(uint256 tQuantia, bool deductTransferFee) public view returns(uint256) {
-        require(tQuantia <= _tTotal, "Amount must be less than supply");
+        require(tQuantia <= _tTotal, "E:Amount > supply"); // Amount must be less than supply"
         if (!deductTransferFee) {
             (uint256 rAmount,,,,,) = _getValues(tQuantia);
             return rAmount;
@@ -264,13 +269,13 @@ contract SEABSDv5 is Context, IERC20, Ownable {
  
     // Inverse operation. (f2)
     function tokenFromReflection(uint256 rAmount) public view returns(uint256) {
-        require(rAmount <= _rTotal, "Amount must be less than total reflections");
+        require(rAmount <= _rTotal, "E:Amount > reflections total"); // Amount must be less than total reflections
         uint256 currentRate =  _getRate();
         return rAmount.div(currentRate);
     }
  
     function excluiReward(address account) public onlyOwner() {
-        require(!_isExcludedR[account], "Account is already excluded");
+        require(!_isExcludedR[account], "Already excluded");
         if(_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]); // (f2)
         }
@@ -279,7 +284,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     }
  
     function incluiReward(address account) external onlyOwner() {
-        require(_isExcludedR[account], "Account is not excluded"); // Auditoria XFC-06
+        require(_isExcludedR[account], "Not excluded"); // Auditoria XFC-06 Account is not excluded
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
@@ -303,14 +308,17 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     // Permite redefinir taxa maxima de transfer, assume compromisso hardcoded de sempre ser menor que 8% (convenant community rules)
     function setBurnFeePercent(uint256 burnFee) external onlyOwner() { _burnFee = burnFee; } // burn nao e tax (f3)
     function setTaxFeePercent(uint256 taxFee) external onlyOwner() { 
-        require((taxFee+_liquidityFee+_healthFee)<=_maxTassazione,"Taxation without representation is Theft");
+        require((taxFee+_liquidityFee+_healthFee)<=_maxTassazione,"Taxation is Theft"); // Taxation without representation is Theft
         _taxFee = taxFee;
     }
     function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner() {
-        require((liquidityFee+_taxFee+_healthFee)<=_maxTassazione,"Taxation without representation is Theft");
+        require((liquidityFee+_taxFee+_healthFee)<=_maxTassazione,"Taxation is Theft");
         _liquidityFee = liquidityFee;
     }
-    function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner() { require(maxTxPercent < 8,"Taxation without representation is Theft"); _maxTxAmount = _tTotal.mul(maxTxPercent).div( 10**2 ); } // Regra de 3 pra porcentagem }
+    function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner() {
+        require(maxTxPercent <= 8,"Taxation wo representation is Theft");
+        _maxTxAmount = _tTotal.mul(maxTxPercent).div( 10**2 ); // Regra de 3 pra porcentagem
+    }
  
     function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
         swapAndLiquifyEnabled = _enabled;
@@ -410,20 +418,20 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     }
  
     function _approve(address owner, address spender, uint256 amount) private {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
+        require(owner != address(0), "E: addr zero?"); // ERC20: approve from the zero address
+        require(spender != address(0), "E: addr zero?");
  
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
  
     function _transfer( address from, address to, uint256 amount) private {
-        require(from != address(0), "ERC20: transfer from the zero address");
-        require(amount > 0, "Transfer amount must be greater than zero");
+        require(from != address(0), "E: addr zero?"); // ERC20: transfer from the zero address
+        require(amount > 0, "Amount too low"); // Transfer amount must be greater than zero
         if(from == uniswapV2Pair || to == uniswapV2Pair)  // if DeFi, must be trusted (f15), owner is no exception T:OK (CONFIG:hardcoded)
-            require(_selfDetermined[to].spFirstTrustee!=address(0)||_selfDetermined[from].spFirstTrustee!=address(0),"AuthZ: DeFi service limited to trusted x-persona. Use p2p."); // (f15) T:OK
+            require(_selfDetermined[to].spFirstTrustee!=address(0)||_selfDetermined[from].spFirstTrustee!=address(0),"A2: DeFi limited to trusted. Use p2p"); // (f15) T:OK DeFi service limited to trusted x-persona. Use p2p. 
         if(from != owner() && to != owner())
-            require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
+            require(amount <= _maxTxAmount, "Amount too high"); // Transfer amount exceeds the maxTxAmount.
             
         uint256 contractTokenBalance = balanceOf(address(this));
  
@@ -446,7 +454,8 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         
          // (f6) dont charge fees on p2p transactions. comment out (CONFIG:hardcoded) if this crypto-panarchy wants different
         if (from != uniswapV2Pair && to!= uniswapV2Pair) { takeFee = false; } // maybe make it configurable?
-        
+        if (to == wallet_health) { healthDepositTracker[from].add(amount); } // (f8,f7) keep track of who contributes more to health funds
+    
         //if any account belongs to _isExcludedF account then remove the fee
         if(_isExcludedF[from] || _isExcludedF[to]){
             takeFee = false;
@@ -454,6 +463,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
  
         //transfer amount, it will take tax, burn, liquidity fee
         _tokenTransfer(from,to,amount,takeFee);
+        
     }
  
  function swapAndLiquify(uint256 contractTokenBalance) private travaSwap {
@@ -560,7 +570,8 @@ contract SEABSDv5 is Context, IERC20, Ownable {
  
         // sobrou discountAmt precisamos enviar pras carteiras de direito, burn e health
         _transferStandard(sender, address(0x000000000000000000000000000000000000dEaD), burnAmt); // envia pro burn 0x0::dEaD a fee configurada sem gambi de burn holder
-        _transferStandard(sender, address(wallet_health), healthAmt); // pagar direto pra carteira da Saude uma taxa adicional (discutir)
+        _transferStandard(sender, address(wallet_health), healthAmt); // (f7) pay fee to health wallet, debate it widely with this panarchy
+        healthDepositTracker[sender].add(healthAmt); // (f8) keep track of who contributes more to health funds
  
         // Restaura as taxas
         _taxFee = _previousTaxFee; _liquidityFee = _previousLiquidityFee; _healthFee = _prevHealthFee;
@@ -591,7 +602,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     }
  
     function setRouterAddress(address novoRouter) public onlyOwner() {
-        //Ideia foda do FreezyEx, permite mudar o router da Pancake pra upgrade. Atende tambem compliace XFC-03 controle de. external & 3rd party
+        //Ideia boa do FreezyEx, permite mudar o router da Pancake pra upgrade. Atende tambem compliace XFC-03 controle de. external & 3rd party
         IUniswapV2Router02 _newPancakeRouter = IUniswapV2Router02(novoRouter);
         uniswapV2Pair = IUniswapV2Factory(_newPancakeRouter.factory()).createPair(address(this), _newPancakeRouter.WETH());
         uniswapV2Router = _newPancakeRouter;
@@ -645,34 +656,17 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         wallet_health = newHealthAddr;
         return true;
     }
-    // T:OK:(f1)
-    function getDefaultFees() public view returns(uint256,uint256,uint256) {
-        return (_healthFee,_liquidityFee,_taxFee);
+    // T:OK:(f1):default fees and caller fees
+    function getFees() public view returns(uint256,uint256,uint256,uint256,uint256,uint256) {
+        return (_healthFee,_liquidityFee,_taxFee,_selfDetermined[msg.sender].sHealthFee,_selfDetermined[msg.sender].sLiquidityFee,_selfDetermined[msg.sender].sTaxFee);
     }
-    // T:OK:(f1)    
-    function getMyFees() public view returns(uint256,uint256,uint256) {
-        return (_selfDetermined[msg.sender].sHealthFee,_selfDetermined[msg.sender].sLiquidityFee,_selfDetermined[msg.sender].sTaxFee);
-    }
-    // T:OK (f13)
-    function setNickName(string memory xpersonalias) public notPhysicallyRemoved() returns(string memory) {
-        /* if (msg.sender = owner)
-            _selfDetermined[_endereco].sNickname = xpersonalias; // provavelmente melhor nao
-        else */
-            _selfDetermined[msg.sender].sNickname = xpersonalias;
-            return _selfDetermined[msg.sender].sNickname;
-    }
-    // T:OK (f13)
-    function getNickName(address endereco) public view returns(string memory, uint256) {
-        require(bytes(_selfDetermined[endereco].sNickname).length != 0,"sNickname not set");
-        return (_selfDetermined[endereco].sNickname,bytes(_selfDetermined[endereco].sNickname).length);
-        /* refactorado per l'uso require() if (bytes(_selfDetermined[endereco].sNickname).length == 0) return _selfDetermined[endereco].sNickname; */
-    }
-    
+    // T:OK (f13): nickname handling merged to finger to save gas and contract size
+    // T:OK (f13): refactorado per l'uso require() if (bytes(_selfDetermined[endereco].sNickname).length == 0) return _selfDetermined[endereco].sNickname;
     // XXX_Todo: implementar modificador onlyPrivLawCourt caso torne essa funcao publica
     // testar notPhysicallyRemoved() (DONE) e setViolations unitariamente
-    // T:PEND (f12)
-    function setViolations(uint256 _violationType, address _who) internal notPhysicallyRemoved() returns(uint256 _spContractsViolated) {
-        require(_violationType>=0&&_violationType<=2,"AuthZ: violation types: 0 (contracts) or 1 (arbitration)");
+    // T:PEND (f12):Dropped this function. Included in setArbitration()
+    /* function setViolations(uint256 _violationType, address _who) internal notPhysicallyRemoved() returns(uint256 _spContractsViolated) {
+        require(_violationType>=0&&_violationType<=2,"A2 bad type"); // AuthZ: violation types: 0 (contracts) or 1 (arbitration)
         
         if (_violationType==1) {
             // worse case scenario: kicked out out crypto-panarchy
@@ -683,24 +677,27 @@ contract SEABSDv5 is Context, IERC20, Ownable {
             _selfDetermined[_who].spContractsViolated.add(1);
              
         return(_selfDetermined[_who].spContractsViolated);
-    }
+    }*/
     
     // T:OK (f12)
-    function setTrustPoints(address _who, uint256 _points) internal notPhysicallyRemoved() returns(uint256[2] memory _currPoints) {
-        require((_points >= 0 && _points <= 5),"AuthZ: points must be 0-5");
-        require(_who!=_msgSender(),"AuthZ: you can't set points to yourself.");
+    function setTrustPoints(address _who, uint256 _points) public notPhysicallyRemoved() {
+        require((_points >= 0 && _points <= 5),"E: points 0-5"); // AuthZ: points must be 0-5
+        require(_who!=_msgSender(),"A2: points to self"); // AuthZ: you can't set points to yourself.
         _selfDetermined[_who].spTrustPoints = [
             _selfDetermined[_who].spTrustPoints[0].add(1), // count++
             _selfDetermined[_who].spTrustPoints[1].add(_points) // give points
             // Save gas, let the client find the average _selfDetermined[_who].spTrustPoints[2]=_selfDetermined[_who].spTrustPoints[1].div(_selfDetermined[_who].spTrustPoints[0]) // calculates new avg
         ];
-        return(_selfDetermined[_who].spTrustPoints);
+        _selfDetermined[_who].spTrustPoints = [
+            _selfDetermined[_msgSender()].spTrustPoints[0].add(1), // count++
+            _selfDetermined[_msgSender()].spTrustPoints[1].sub(_points) // subtracts points from giver
+        ];
     }
     
-    // T:OK (f12)
-    function getTrustPoints(address _who) public view returns(uint256[2] memory _currPoints) {
+    // T:OK (f12):merged to trustchain function getTrustPoints(address _who)
+    /* function getTrustPoints(address _who) public view returns(uint256[2] memory _currPoints) {
         return(_selfDetermined[_who].spTrustPoints);
-    }
+    }*/
     
     /* XXX_Lembrar_de_Remover XXX_implement point system upon contracts or make setTrustPoints public (f12)
     function vai(address _who) public {
@@ -711,20 +708,21 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     */
     
     //T:OK (f13)
-    function setFinger(string memory _sPgpPubK,string memory _sSshPubK,string memory _sX509PubK,string memory _sGecos,uint256 _sRole) public notPhysicallyRemoved() {
+    function setFinger(string memory _sPgpPubK,string memory _sSshPubK,string memory _sX509PubK,string memory _sGecos,uint256 _sRole, string memory _sNickname) public notPhysicallyRemoved() {
         _selfDetermined[_msgSender()].sPgpPubK=_sPgpPubK;
         _selfDetermined[_msgSender()].sSshPubK=_sSshPubK;
         _selfDetermined[_msgSender()].sX509PubK=_sX509PubK;
         _selfDetermined[_msgSender()].sGecos=_sGecos;
         _selfDetermined[_msgSender()].sRole=_sRole;
+        _selfDetermined[_msgSender()].sNickname=_sNickname;
     }
     
     // T:OK (f11)
     function setWhoUtrust(uint256 mode,address _youTrust) public notPhysicallyRemoved() returns(uint256 _len) {
-        require(_selfDetermined[_msgSender()].sYouTrust.length < 150,"AuthZ: trustChain too large"); // convenant size limit = (Dunbar's number: 150, Bernard–Killworth median: 231);
+        require(_selfDetermined[_msgSender()].sYouTrust.length < 150,"A2: trustChain too big"); // convenant size limit = (Dunbar's number: 150, Bernard–Killworth median: 231);
         if (owner()!=_msgSender()) {
-            require(_msgSender()!=_youTrust,"AuthZ: you can't trust yourself"); 
-            require(_youTrust!=uniswapV2Pair,"AuthZ: you can't trust special contracts"); 
+            require(_msgSender()!=_youTrust,"A2: no trust self"); // AuthZ: you can't trust yourself
+            require(_youTrust!=uniswapV2Pair,"A2: no trust pair"); // AuthZ: you can't trust special contracts
         }
         // mode 1 is to delete from your trust list (you are not a trustee), bool->int to save gwei
         if (mode==1) { 
@@ -757,8 +755,8 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     }
     
     // T:OK (f13)
-    function Finger(address _who) public view returns(string memory _sPgpPubK,string memory _sSshPubK,string memory _sX509PubK,string memory _sGecos,uint256 _sRole) {
-        return (_selfDetermined[_who].sPgpPubK,_selfDetermined[_who].sSshPubK,_selfDetermined[_who].sX509PubK,_selfDetermined[_who].sGecos,_selfDetermined[_who].sRole);    
+    function Finger(address _who) public view returns(string memory _sPgpPubK,string memory _sSshPubK,string memory _sX509PubK,string memory _sGecos,uint256 _sRole, string memory _sNickname) {
+        return (_selfDetermined[_who].sPgpPubK,_selfDetermined[_who].sSshPubK,_selfDetermined[_who].sX509PubK,_selfDetermined[_who].sGecos,_selfDetermined[_who].sRole,_selfDetermined[_who].sNickname);    
     }
     
     // T:OK (f11)
@@ -769,7 +767,8 @@ contract SEABSDv5 is Context, IERC20, Ownable {
             uint256 _youTrustCount,
             address[] memory _theyTrustU,
             uint256 _theyTrustUcount,
-            uint256[] memory _youAgreementsSigned
+            uint256[] memory _youAgreementsSigned,
+            uint256[2] memory _yourTrustPoints
             ) {
         return (
             _selfDetermined[_who].spFirstTrustee,
@@ -777,7 +776,8 @@ contract SEABSDv5 is Context, IERC20, Ownable {
             _selfDetermined[_who].sYouTrust.length,
             _selfDetermined[_who].spTrustYou,
             _selfDetermined[_who].spTrustYou.length,
-            _selfDetermined[_who].spYouAgreementsSigned
+            _selfDetermined[_who].spYouAgreementsSigned,
+            _selfDetermined[_who].spTrustPoints
         );
     }
     /**
@@ -791,13 +791,12 @@ contract SEABSDv5 is Context, IERC20, Ownable {
      * in caso di scioglimento dell'accordo. L'accordo viene sciolto, tutti i firmatari vengono rimborsati delle multe.
      * In una società cripto-panarchica, l'arbitrato del tribunale privato deve essere codificato. I Cypherpunk scrivono codice.
      * 
-     * XXX_Pend: Codificar todos os outros procedimentos: arbitragem, pontuacao, saque
      * T:OK (f9)
      **/
-     // T:OK
-    function setAgreement(uint256 _aid, string memory _hash, string memory _gecos, string memory _url, string memory _signedHash, uint256 _fine, address _arbitrator, uint256 _deposit, string memory _signComment,uint256 _sign) notPhysicallyRemoved public {
-        require(_aid>0,"AuthZ: ivalid id for private agreement");
-        require(_selfDetermined[_arbitrator].sRole==1,"AuthZ: arbitrator must set himself Role=1");
+     // T:OK:(f9)
+    function setAgreement(uint256 _aid, string memory _hash, string memory _gecos, string memory _url, string memory _signedHash, uint256 _fine, address _arbitrator, uint256 _arbitratorFee, uint256 _deposit, string memory _signComment,uint256 _sign) notPhysicallyRemoved public {
+        require(_aid>0,"A2: bad id"); // AuthZ: ivalid id for private agreement
+        require(_selfDetermined[_arbitrator].sRole==1,"A2: court must be Role=1"); // A2: arbitrator or court must set himself Role=1
         if(_privLawAgreement[_aid].creator==address(0)) { // doesnt exist, create it
             _privLawAgreement[_aid].hash=_hash;
             _privLawAgreement[_aid].gecos=_gecos;
@@ -806,75 +805,61 @@ contract SEABSDv5 is Context, IERC20, Ownable {
             _privLawAgreement[_aid].deposit=_deposit; // 1 = required
             _privLawAgreement[_aid].creator=msg.sender;
             _privLawAgreement[_aid].arbitrator=_arbitrator;
+            _privLawAgreement[_aid].arbitratorFee=_arbitratorFee;
             _privLawAgreement[_aid].createdOn=block.timestamp;
             _privLawAgreementIDs.push(_aid);
-        } else {
-            require(_fine==_privLawAgreement[_aid].fine,"AuthZ: fine value mismatch");
-            require(keccak256(abi.encode(_hash))==keccak256(abi.encode(_privLawAgreement[_aid].hash)),"AuthZ: must reaffirm hash acceptance");
-            require(msg.sender!=_arbitrator,"AuthZ: arbitrator can not take part of the agreement");
-            require(_sign==1,"AuthZ: agreement ID exists, explicitly consent to sign it");
+        } else { // exists, sign it
+            _setAgreementSign(_aid, _hash, _signedHash, _fine, _arbitrator, _signComment, _sign);
+        }
+    }
+    //T:PEND:(f9):Sign existing agreement. Separated non-public functions to save gas
+    function _setAgreementSign(uint256 _aid, string memory _hash, string memory _signedHash, uint256 _fine, address _arbitrator, string memory _signComment, uint256 _sign) internal {
+            require(_fine==_privLawAgreement[_aid].fine,"A2: bad fine"); // AuthZ: fine value mismatch
+            require(keccak256(abi.encode(_hash))==keccak256(abi.encode(_privLawAgreement[_aid].hash)),"A2: bad hash"); // AuthZ: must reaffirm hash acceptance
+            require(msg.sender!=_arbitrator,"A2: court can't be party"); // AuthZ: arbitrator can not take part of the agreement
+            require(_sign==1,"A2: sign it! (aid)"); // AuthZ: agreement ID exists, explicitly consent to sign it
             _privLawAgreement[_aid].fine=_fine;
             _privLawAgreement[_aid].signedOn[msg.sender]=block.timestamp;
             _privLawAgreement[_aid].signedHash[msg.sender]=_signedHash;
             _privLawAgreement[_aid].signComment[msg.sender]=_signComment;
             if (_privLawAgreement[_aid].finePaid[msg.sender]==0 && _privLawAgreement[_aid].deposit==1) { // must deposit fine in advance in this contract
-                require(balanceOf(_msgSender()) >= _fine,"ERC20: balance below required fine amount, cant sign agreement");
+                require(balanceOf(_msgSender()) >= _fine,"E: balance is below fine"); // ERC20: balance below required fine amount, cant sign agreement
                     transfer(address(this), _fine); // transfer fine deposit to contract T:BUG
                     //_transfer(_msgSender(), recipient, amount);
                 _privLawAgreement[_aid].finePaid[msg.sender]=1;
             }
             
-            (_privLawAgreement[_aid].signature[msg.sender], _privLawAgreement[_aid].signatureNonce[msg.sender]) = xffa.simpleSignSaltedHash("I hereby consent to this agreement.");
+           (_privLawAgreement[_aid].signature[msg.sender], _privLawAgreement[_aid].signatureNonce[msg.sender]) = xffa.simpleSignSaltedHash("I hereby consent aid");
             _selfDetermined[msg.sender].spYouAgreementsSigned.push(_aid);
             _privLawAgreement[_aid].signees.push(msg.sender);
             _privLawAgreement[_aid].state[msg.sender]=1; // mark active
-        }
     }
-    // T:OK
-    function getAgreementIdsList() public view returns (uint256[] memory _privLawAgreementIdsList) { return(_privLawAgreementIDs); }
-    // T:OK
-    function getAgreement(uint256 _aid) public view returns (
-        string memory _hash,
-        string memory,
-        uint256 _fine,
-        uint256 _deposit,
-        address _creator,
-        uint256 _createdOn,
-        address _arbitrator
-        ) {
-        require(_privLawAgreement[_aid].creator!=address(0),"AuthZ: agreement ID is nonexistant");
-        return(
-            _privLawAgreement[_aid].hash,
-            string(abi.encodePacked("_gecos ",_privLawAgreement[_aid].gecos," _url ",_privLawAgreement[_aid].url)),
-            _privLawAgreement[_aid].fine,
-            _privLawAgreement[_aid].deposit,
-            _privLawAgreement[_aid].creator,
-            _privLawAgreement[_aid].createdOn,
-            _privLawAgreement[_aid].arbitrator
-        );
-    }
-    // T:OK:Allows one to get someone's termos to agreement aid
-    function getAgreementData(uint256 _aid, address _who) public view returns (
-        string memory,
-        uint256 _signedOn,
-        address _arbitrator,
-        uint256 _finePaid,
-        uint256 _state
-        ) {
-        require(_privLawAgreement[_aid].signedOn[_who]!=0,"AuthZ: this x-persona did not sign this agreement ID");
-        bool _validSign = xffa.verifySimpleSignSaltedHash(_privLawAgreement[_aid].signature[_who],_who,"I hereby consent to this agreement.",_privLawAgreement[_aid].signatureNonce[_who]);
+    // T:PEND(MERGE):(f9):Allows one to get agreement data and someone's termos to agreement aid
+    function getAgreementData(uint256 _aid, address _who) public view returns (string memory, string memory, string memory) {
+        require(_privLawAgreement[_aid].creator!=address(0),"A2: bad aid"); // AuthZ: agreement ID is nonexistant
+        //require(_privLawAgreement[_aid].signedOn[_who]!=0,"AuthZ: this x-persona did not sign this agreement ID");
+        bool _validSign = xffa.verifySimpleSignSaltedHash(_privLawAgreement[_aid].signature[_who],_who,"I hereby consent aid",_privLawAgreement[_aid].signatureNonce[_who]);
         string memory _vLabel = "false";
         if (_validSign==true) _vLabel = "true";
         return(
-            string(abi.encodePacked("_hash ",_privLawAgreement[_aid].hash,
+            // specifics for signee (_who)
+            string(abi.encodePacked(
                 " _signedHash ",_privLawAgreement[_aid].signedHash[_who],
                 " _signComment ",_privLawAgreement[_aid].signComment[_who],
-                " _signatureValid ",_vLabel," _fine ",xffa.uint2str(_privLawAgreement[_aid].fine)
+                " _signatureValid ",_vLabel," _signedOn ",xffa.uint2str(_privLawAgreement[_aid].signedOn[_who]),
+                " _finePaid ",xffa.uint2str(_privLawAgreement[_aid].finePaid[_who]),
+                " _state ",xffa.uint2str(_privLawAgreement[_aid].state[_who])
                 )),
-            _privLawAgreement[_aid].signedOn[_who],
-            _privLawAgreement[_aid].arbitrator,
-            _privLawAgreement[_aid].finePaid[_who],
-            _privLawAgreement[_aid].state[_who]
+            // agreement generics (everyone)
+            string(abi.encodePacked(" _creator ",xffa.anyToStr(_privLawAgreement[_aid].creator),
+                " _hash ",_privLawAgreement[_aid].hash," _arbitrator ",xffa.anyToStr(_privLawAgreement[_aid].arbitrator),
+                " _arbitratorFee ", xffa.anyToStr(_privLawAgreement[_aid].arbitratorFee),
+                " _fine ",xffa.uint2str(_privLawAgreement[_aid].fine)," _gecos ",_privLawAgreement[_aid].gecos,
+                " _url ",_privLawAgreement[_aid].url
+                )),
+            // stack too deep (after merge)
+            string(abi.encodePacked(" _deposit ",xffa.uint2str(_privLawAgreement[_aid].deposit)
+                ))
         );
     }
     // XXX_Pend: continuar daqui
@@ -889,11 +874,11 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         _privLawAgreement[_aid].state[0x3644B986B3F5Ba3cb8D5627A22465942f8E06d09]=_aid;
         _privLawAgreement[_aid].state[0x000000000000000000000000000000000000dEaD]=2;
     }
-    //T:OK:Allows one to get all signees to a given agreement id
+    //T:OK:(f9):Allows one to get all signees to a given agreement id
     function getAgreementSignees(uint256 _aid) public view returns(address[] memory _signees) {
         return (_privLawAgreement[_aid].signees);
     }
-    //T:OK:Allow to test if agreement is settled peacefully (state=2) or not. Returns the first who did not agree if not settled. 
+    //T:OK:(f9):Allow to test if agreement is settled peacefully (state=2) or not. Returns the first who did not agree if not settled. 
     function isSettledAgreement(uint256 _aid) public view returns(bool, address _who) {
         address _whod;
         for (uint256 n=0; n<_privLawAgreement[_aid].signees.length;n++) {
@@ -903,7 +888,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         }
         return (true,address(0));
     }
-    //T:OK:A non public version of the previous function, for testing and not informational
+    //T:OK:(f9):A non public version of the previous function, for testing and not informational
     function _isSettledAgreement(uint256 _aid) private view returns(bool) {
         address _whod;
         for (uint256 n=0; n<_privLawAgreement[_aid].signees.length;n++) {
@@ -914,35 +899,100 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         return (true);
     }
     //T:PEND:Allows withdrawal of deposit if agreement is settled or has been arbitrated
-    /*function wdAgreement(uint256 _aid) public {
-        require(_privLawAgreement[_aid].deposit==1 && _privLawAgreement[_aid].finePaid[msg.sender]==1,"Withdrawal: you never paid deposit for this agreement id");
-        uint256 value = _privLawAgreement[_aid].fine;
-        //require(value>0,"Withdrawal: deposit fine for this agreement was 0, contact arbitrator our administration."); // should never triggered 
-        require(balanceOf(address(this))>=value,"Withdrawal: contract balance is too low, please have someone (arbitrator or crypto-panarchy administration) fund this contract");
-        require((_privLawAgreement[_aid].state[_msgSender()]==4 || _isSettledAgreement(_aid)),"Withdrawal: sorry, agreement is neither settled or arbitrated to your favor");
+    function wdAgreement(uint256 _aid) public {
+        require(_privLawAgreement[_aid].deposit==1 && _privLawAgreement[_aid].finePaid[_msgSender()]==1,"E: not paid"); // Withdrawal: you never paid deposit for this agreement id
+        require(_privLawAgreement[_aid].fine>0,"E: nothing to wd"); // Withdrawal: nothing to withdrawal, agreement charged no fine"
+        require(balanceOf(address(this))>=_privLawAgreement[_aid].fine,"E: contract balance is too low"); // Withdrawal: contract balance is too low, arbitrator or crypto-panarchy administration should fund it
+        require((_privLawAgreement[_aid].state[_msgSender()]==4 || _isSettledAgreement(_aid)),"E: wd not ready"); // Withdrawal: sorry, agreement is neither settled or arbitrated to your favor
 
-        /** Precisa definir o valor. Possibile logica aziendale:
-         * - se for settlement amigavel, devolve o que pagou, paga fee, mark 21
-         * - se for disputa arbitrada mark 41
+        /** Precisamos definir o valor. Possibile logica aziendale:
+         * - se for settlement amigavel, devolve o que pagou, paga fee, mark state 21
+         * - se for disputa arbitrada mark state 41
          *      - saca o dobro se for um acordo com apenas duas partes, desconta taxa de arbitragem
          *      - descobre os perdedores P, descobre o total de perdedores tP divide pelo total de signatararios s, desconta arbitragem e paga a divisao
-         *          - saque = (tP / s)*D/(s-tP)-f
+         *          - saque = (D*s) - f / (s-tP)
          *              onde
          *                  tp = total de perdedores da disputa (ie 2)
          *                  s = total de signees (ie 10)
-         *                  D = fine depositada (ie 60)
-         *                  f = tazza de arbitragem (ie 0,2)
-         *          - ∴ saque = (2/10)*60/(10-2)-0,2
+         *                  D = fine depositada per s (ie 60)
+         *                  f = tazza de arbittrage (ie 2)
+         *          - ∴ saque = ( (60*10)-3/(10-2) ) ∴ 59962500000 wei 
          *      - arbitragem define outro valor? melhor nao. nel codice, ci fidiamo.
-         * - pagamento da fee de arbitragem apenas sobre saques individuais
-         *  - fee de arbitragem hardcoded no contrato (imutavel)
+         * - pagamento da fee de arbitragem apenas sobre saques individuais, mark state 91
+         *  - fee de arbittrage: max fee absolute hardcoded no contrato (imutavel),
+         *                      custom fee absolute, or percentage fee hardcoded no contratto
+         *                      therefore we have custom (free market), default in percentage
+         *                      and max arbitration fee, which the reason to exist was discussed
+         *                      between Tom W Bell & 0xFF4, and is an optional upper limit by the crypto-panarchy.
          **/
-       /*
-        uint256 wdValue=10;
+        
+        uint256 tP;
+        uint256 s=_privLawAgreement[_aid].signees.length; 
+        uint256 D=_privLawAgreement[_aid].fine; //
+        uint256 fmax=3 * 10**_decimals; // max arbitration fee (in Tokens) (CONFIG:hardcoded)
+        uint256 fpc=2; // default arbitration fee in percentage (CONFIG:hardcoded)
+        uint256 f=(D.mul(s)).mul(fpc).div( (10**2)); // default arbitration fee value in tokens
+        uint256 wdValue; 
+    
+        if (_isSettledAgreement(_aid)) { // its all good, agreement is friendly settled
+            require(_msgSender()!=_privLawAgreement[_aid].arbitrator,"E:fee not due"); // Withdrawal: friendly settled aid, no arbitration fee is due"
+            // if (_msgSender()!=_privLawAgreement[_aid].arbitrator) {  return false; } // cheaper
+            wdValue=_privLawAgreement[_aid].fine; // get back what you paid
+            _privLawAgreement[_aid].state[msg.sender]=21; // mark 21
+        }
+        
+        if (_privLawAgreement[_aid].arbitratorFee>0) { f=_privLawAgreement[_aid].arbitratorFee; } // arbitrator has set a custom fee
+        if (f > fmax) { f=fmax; } // arbitration fee never above fmax for this panarchy.
+        for (uint256 n=0; n<s; n++) { tP.add(1); } // tP++
+        
+        if (msg.sender==_privLawAgreement[_aid].arbitrator) { // arbitrator withdrawal
+           require(_privLawAgreement[_aid].state[_msgSender()]!=91); // Withdrawal: arbitrator fee already claimed
+            wdValue=f;
+            _privLawAgreement[_aid].state[msg.sender]=91; // mark 91
+        } else { // signee withdrawal
+            require(_privLawAgreement[_aid].state[_msgSender()]!=41); // "Withdrawal: signee disputed fine already claimed"
+            wdValue=( (D*s) - f / (s-tP) ); // the formula debated for this panarchy
+            _privLawAgreement[_aid].state[msg.sender]=41; // mark 41
+        }
+       
         _approve(address(this), msg.sender, wdValue);
         _transfer(address(this), msg.sender, wdValue);
-    }*/
+    }
+
+    // 1=active/signed, 2=want_friendly_terminate, 3=want_dispute, 4=won_dispute, 5=lost_dispute
+    // 21=friendly_withdrawaled, 41=disputed_wdled, 91=arbitrator_wdled 99=disputed_outside(ostracized)
+    // T:PEND:(f16):Allows signee to enter dispute, enter friendly agreement and allows court to arbitrate disputes
+    function setArbitration(uint256 _aid, uint256 _state, address _signee) public returns(bool) {
+        if (_privLawAgreement[_aid].state[msg.sender]!=1||_privLawAgreement[_aid].arbitrator!=_msgSender()) {
+            return false; // never signed and is not arbitrator, do nothing
+        } else {
+            if (_privLawAgreement[_aid].arbitrator==_msgSender() && _state==99) { // worst scenario, arbitrator informs disputed outside
+                _privLawAgreement[_aid].state[_signee]=99; // set state to 99
+                _selfDetermined[_signee].spContractsViolated++; // violated contract
+                _selfDetermined[_signee].spOptOutArbitrations=1; // disputed outside this panarchy rules: ostracized
+                _selfDetermined[_signee].ostracizedBy.push(_msgSender()); // ostracized by this court
+                setTrustPoints(_signee, 0); // worsen average
+            }
+                
+            if (_privLawAgreement[_aid].arbitrator!=_msgSender() && (_state==2||_state==3||_state==1)) { // signer may set those states
+              _privLawAgreement[_aid].state[msg.sender]=_state;
+            } else if (_privLawAgreement[_aid].arbitrator==_msgSender() && (_privLawAgreement[_aid].state[_signee]==3) && (_state==4||_state==5)) { // arbitrator may set those states to signee if he wants dispute arbitration
+                _privLawAgreement[_aid].state[msg.sender]=_state;
+                if (_state==4) {
+                    setTrustPoints(_signee, 2); // receives 1 point from contract
+                } else {
+                    _selfDetermined[_signee].spContractsViolated++; // violated contract
+                    setTrustPoints(_signee, 0); // worsen average
+                }
+            }
+              
+        }
+        return true;
+        
+    }
+
     
     
- 
-} // EST FINITO
+} //EST FINITO
+
+
