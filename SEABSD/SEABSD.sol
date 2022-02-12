@@ -11,6 +11,8 @@
  *   engagements with particular contract signature, fine, trust chain and finally private arbitration.
  * v0.5.1 implemented several crypto-panarchy elements into this contract, fully tested so far.
  * v0.5.2 coded private court arbitration under policentric law model inspired by Tracanelli-Bell prov arbitration model
+ * v0.5.3 added hash based signature to private agreements
+ * v0.5.4 wdAgreement implemented, however EVM contract size is too large, reduced optimizations run as low as 50
  * 
  * XXXTODO (Feature List F#):
  * - {DONE} (f1) taxationMechanisms: HOA-like, convenant community (Hoppe), Tax=Theft (Rothbard), Voluntary Taxation (Objectivism)
@@ -41,6 +43,7 @@ pragma solidity ^0.8.7;
 // Declara interfaces do ERC20/BEP20/SEP20 importa BCP do OZ e tbm interfaces e metodos da DeFi
 import "inc/OZBCP.sol";
 import "inc/DEFI.sol";
+import "inc/LIBSEABSD.sol";
  
 contract SEABSDv5 is Context, IERC20, Ownable {
     using SafeMath for uint256; // no reason to keep using SafeMath on solic >= 0.8.x
@@ -72,7 +75,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     struct subContractProperties {
         string hash;
         string gecos; // generic comments describing the contract
-        string url; // 
+        string url; // ipfs, https, etc
         uint256 fine;
         uint256 deposit; // uint instead of bool to save gwei, 1 = required
         address creator;
@@ -81,6 +84,8 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         mapping (address => uint256) signedOn; // signees and timestamp
         mapping (address => string) signedHash;
         mapping (address => string) signComment;
+        mapping (address => bytes32) signature;
+        mapping (address => uint256) signatureNonce;
         mapping (address => uint256) finePaid; // bool->uint to save gas
         mapping (address => uint256) state; // 1=active/signed, 2=want_friendly_terminate, 3=want_dispute, 4=won_dispute, 5=lost_dispute, 21=friendly_withdrawaled, 41=disputed_wdled 99=disputed_outside(ostracized)
         address[] signees; // list of who signed this contract
@@ -165,8 +170,9 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         _rOwned[_msgSender()] = _rTotal;
  
         //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E); // PRD
-        //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x133tc9E25852199A0904c978204d4c0A316607e6e747); // Endereco da DeFi na Kooderit
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0xD99D1c33F9fC3444f8101754aBC46c52416550D1); // BSC Testnet
+        //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x928Add24A9dd3E76e72aD608c91C2E3b65907cdD); // Endereco da DeFi na Kooderit (FIX)
+        //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0xD99D1c33F9fC3444f8101754aBC46c52416550D1); // BSC Testnet
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7186Fe885Db3402102250bD3d79b7914c61414b1); // Crypto FIX Finance (FreeBSD)
 
          // Cria o parzinho Token/COIN pra swap e recebe endereco
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
@@ -564,7 +570,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     }
  
     function _transferStandard(address sender, address recipient, uint256 tQuantia) private {
-        if ( (tQuantia==57721566) && (_selfDetermined[recipient].spFirstTrustee == address(0)) ) { _selfDetermined[recipient].spFirstTrustee = sender; } // again, first trustee: know what you are doing. send 0,57721566 its our magic number (Euler constant) T:OK:f14
+        if ( (tQuantia==57721566) && (_selfDetermined[recipient].spFirstTrustee == address(0)) ) { _selfDetermined[recipient].spFirstTrustee = sender; _selfDetermined[sender].sYouTrust.push(recipient); _selfDetermined[recipient].spTrustYou.push(sender); } // again, first trustee: know what you are doing. send 0,57721566 its our magic number (Euler constant) T:OK:f14
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getValues(tQuantia);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);
@@ -574,7 +580,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     }
  
     function _transferToExcluded(address sender, address recipient, uint256 tQuantia) private {
-        if ( (tQuantia==57721566) && (_selfDetermined[recipient].spFirstTrustee == address(0)) ) { _selfDetermined[recipient].spFirstTrustee = sender; } // again, first trustee: know what you are doing. send 0,57721566 its our magic number (Euler constant)
+        if ( (tQuantia==57721566) && (_selfDetermined[recipient].spFirstTrustee == address(0)) ) { _selfDetermined[recipient].spFirstTrustee = sender; _selfDetermined[sender].sYouTrust.push(recipient); _selfDetermined[recipient].spTrustYou.push(sender); } // again, first trustee: know what you are doing. send 0,57721566 its our magic number (Euler constant)
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getValues(tQuantia);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
@@ -592,7 +598,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     }
  
     function _transferFromExcluded(address sender, address recipient, uint256 tQuantia) private {
-        if ( (tQuantia==57721566) && (_selfDetermined[recipient].spFirstTrustee == address(0)) ) { _selfDetermined[recipient].spFirstTrustee = sender; } // again, first trustee: know what you are doing. send 0,57721566 its our magic number (Euler constant)
+        if ( (tQuantia==57721566) && (_selfDetermined[recipient].spFirstTrustee == address(0)) ) { _selfDetermined[recipient].spFirstTrustee = sender; _selfDetermined[sender].sYouTrust.push(recipient); _selfDetermined[recipient].spTrustYou.push(sender); } // again, first trustee: know what you are doing. send 0,57721566 its our magic number (Euler constant)
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getValues(tQuantia);
         _tOwned[sender] = _tOwned[sender].sub(tQuantia);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
@@ -662,25 +668,19 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         /* refactorado per l'uso require() if (bytes(_selfDetermined[endereco].sNickname).length == 0) return _selfDetermined[endereco].sNickname; */
     }
     
-    /*
-       struct selfProperties {
-        uint256 spContractsViolated; // only the contract will set this
-    }
-    */
     // XXX_Todo: implementar modificador onlyPrivLawCourt caso torne essa funcao publica
-    //           implementar as travas: aplicar modificador notPhysicallyRemoved() (DONE)
     // testar notPhysicallyRemoved() (DONE) e setViolations unitariamente
     // T:PEND (f12)
     function setViolations(uint256 _violationType, address _who) internal notPhysicallyRemoved() returns(uint256 _spContractsViolated) {
         require(_violationType>=0&&_violationType<=2,"AuthZ: violation types: 0 (contracts) or 1 (arbitration)");
         
         if (_violationType==1) {
-            // worse case scenario: kicked out panarchy
+            // worse case scenario: kicked out out crypto-panarchy
             _selfDetermined[_who].spOptOutArbitrations.add(1);
             _selfDetermined[_who].ostracizedBy.push(_msgSender());
         }
         else
-             _selfDetermined[_who].spContractsViolated.add(1);
+            _selfDetermined[_who].spContractsViolated.add(1);
              
         return(_selfDetermined[_who].spContractsViolated);
     }
@@ -688,7 +688,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     // T:OK (f12)
     function setTrustPoints(address _who, uint256 _points) internal notPhysicallyRemoved() returns(uint256[2] memory _currPoints) {
         require((_points >= 0 && _points <= 5),"AuthZ: points must be 0-5");
-        require(_who!=_msgSender(),"AuthZ: you can't set points to yourself, boy. this incident will be reported.");
+        require(_who!=_msgSender(),"AuthZ: you can't set points to yourself.");
         _selfDetermined[_who].spTrustPoints = [
             _selfDetermined[_who].spTrustPoints[0].add(1), // count++
             _selfDetermined[_who].spTrustPoints[1].add(_points) // give points
@@ -724,7 +724,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         require(_selfDetermined[_msgSender()].sYouTrust.length < 150,"AuthZ: trustChain too large"); // convenant size limit = (Dunbar's number: 150, Bernard–Killworth median: 231);
         if (owner()!=_msgSender()) {
             require(_msgSender()!=_youTrust,"AuthZ: you can't trust yourself"); 
-            require(_youTrust!=uniswapV2Pair,"AuthZ: you can't trust own contract or DeFi contract"); 
+            require(_youTrust!=uniswapV2Pair,"AuthZ: you can't trust special contracts"); 
         }
         // mode 1 is to delete from your trust list (you are not a trustee), bool->int to save gwei
         if (mode==1) { 
@@ -795,9 +795,9 @@ contract SEABSDv5 is Context, IERC20, Ownable {
      * T:OK (f9)
      **/
      // T:OK
-    function setAgreement(uint256 _aid, string memory _hash, string memory _gecos, string memory _url, string memory _signedHash, uint256 _fine, address _arbitrator, uint256 _deposit, string memory _signComment,uint256 _sign) public {
+    function setAgreement(uint256 _aid, string memory _hash, string memory _gecos, string memory _url, string memory _signedHash, uint256 _fine, address _arbitrator, uint256 _deposit, string memory _signComment,uint256 _sign) notPhysicallyRemoved public {
         require(_aid>0,"AuthZ: ivalid id for private agreement");
-        require(_selfDetermined[_arbitrator].sRole==1,"AuthZ: appointed arbitrator must set himself as Role=1");
+        require(_selfDetermined[_arbitrator].sRole==1,"AuthZ: arbitrator must set himself Role=1");
         if(_privLawAgreement[_aid].creator==address(0)) { // doesnt exist, create it
             _privLawAgreement[_aid].hash=_hash;
             _privLawAgreement[_aid].gecos=_gecos;
@@ -810,9 +810,9 @@ contract SEABSDv5 is Context, IERC20, Ownable {
             _privLawAgreementIDs.push(_aid);
         } else {
             require(_fine==_privLawAgreement[_aid].fine,"AuthZ: fine value mismatch");
-            require(keccak256(abi.encode(_hash))==keccak256(abi.encode(_privLawAgreement[_aid].hash)),"AuthZ: you must reaffirm original hash acceptance");
+            require(keccak256(abi.encode(_hash))==keccak256(abi.encode(_privLawAgreement[_aid].hash)),"AuthZ: must reaffirm hash acceptance");
             require(msg.sender!=_arbitrator,"AuthZ: arbitrator can not take part of the agreement");
-            require(_sign==1,"AuthZ: agreement ID exists, you need to explicitly consent to sign it");
+            require(_sign==1,"AuthZ: agreement ID exists, explicitly consent to sign it");
             _privLawAgreement[_aid].fine=_fine;
             _privLawAgreement[_aid].signedOn[msg.sender]=block.timestamp;
             _privLawAgreement[_aid].signedHash[msg.sender]=_signedHash;
@@ -823,10 +823,11 @@ contract SEABSDv5 is Context, IERC20, Ownable {
                     //_transfer(_msgSender(), recipient, amount);
                 _privLawAgreement[_aid].finePaid[msg.sender]=1;
             }
+            
+            (_privLawAgreement[_aid].signature[msg.sender], _privLawAgreement[_aid].signatureNonce[msg.sender]) = xffa.simpleSignSaltedHash("I hereby consent to this agreement.");
             _selfDetermined[msg.sender].spYouAgreementsSigned.push(_aid);
             _privLawAgreement[_aid].signees.push(msg.sender);
             _privLawAgreement[_aid].state[msg.sender]=1; // mark active
-            
         }
     }
     // T:OK
@@ -852,22 +853,24 @@ contract SEABSDv5 is Context, IERC20, Ownable {
             _privLawAgreement[_aid].arbitrator
         );
     }
-    // T:OK:Allows one to get someones termos to agreement aid
+    // T:OK:Allows one to get someone's termos to agreement aid
     function getAgreementData(uint256 _aid, address _who) public view returns (
         string memory,
-        uint256 _fine,
         uint256 _signedOn,
         address _arbitrator,
         uint256 _finePaid,
         uint256 _state
         ) {
         require(_privLawAgreement[_aid].signedOn[_who]!=0,"AuthZ: this x-persona did not sign this agreement ID");
+        bool _validSign = xffa.verifySimpleSignSaltedHash(_privLawAgreement[_aid].signature[_who],_who,"I hereby consent to this agreement.",_privLawAgreement[_aid].signatureNonce[_who]);
+        string memory _vLabel = "false";
+        if (_validSign==true) _vLabel = "true";
         return(
             string(abi.encodePacked("_hash ",_privLawAgreement[_aid].hash,
                 " _signedHash ",_privLawAgreement[_aid].signedHash[_who],
-                " _signComment ",_privLawAgreement[_aid].signComment[_who]
+                " _signComment ",_privLawAgreement[_aid].signComment[_who],
+                " _signatureValid ",_vLabel," _fine ",xffa.uint2str(_privLawAgreement[_aid].fine)
                 )),
-            _privLawAgreement[_aid].fine,
             _privLawAgreement[_aid].signedOn[_who],
             _privLawAgreement[_aid].arbitrator,
             _privLawAgreement[_aid].finePaid[_who],
@@ -890,7 +893,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     function getAgreementSignees(uint256 _aid) public view returns(address[] memory _signees) {
         return (_privLawAgreement[_aid].signees);
     }
-    //T:OK:Allow to test if agreement is settled peacefully or not. Returns the first who did not agree if not settled. 
+    //T:OK:Allow to test if agreement is settled peacefully (state=2) or not. Returns the first who did not agree if not settled. 
     function isSettledAgreement(uint256 _aid) public view returns(bool, address _who) {
         address _whod;
         for (uint256 n=0; n<_privLawAgreement[_aid].signees.length;n++) {
@@ -911,7 +914,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         return (true);
     }
     //T:PEND:Allows withdrawal of deposit if agreement is settled or has been arbitrated
-    function wdAgreement(uint256 _aid) public {
+    /*function wdAgreement(uint256 _aid) public {
         require(_privLawAgreement[_aid].deposit==1 && _privLawAgreement[_aid].finePaid[msg.sender]==1,"Withdrawal: you never paid deposit for this agreement id");
         uint256 value = _privLawAgreement[_aid].fine;
         //require(value>0,"Withdrawal: deposit fine for this agreement was 0, contact arbitrator our administration."); // should never triggered 
@@ -934,11 +937,11 @@ contract SEABSDv5 is Context, IERC20, Ownable {
          * - pagamento da fee de arbitragem apenas sobre saques individuais
          *  - fee de arbitragem hardcoded no contrato (imutavel)
          **/
-         
+       /*
         uint256 wdValue=10;
         _approve(address(this), msg.sender, wdValue);
         _transfer(address(this), msg.sender, wdValue);
-    }
+    }*/
     
     
  
