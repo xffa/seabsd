@@ -1,0 +1,374 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta name="generator" content="Udine 0.45.0-Dev" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="The Distributed Crypto-Panarchist Society" />
+
+  <title>Seabsd Community</title>
+</head>
+<body>
+
+<style type="text/css">
+body {
+  font-size: 14px;
+  line-height: 22px;
+  background: #fff;
+  color: #4d4d4d;
+  font-family: Helvetica Neue, Helvetica, Arial;
+}
+.interface {
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Helvetica, Arial, sans-serif !important;
+}
+.h1s {
+  padding-top: 20px;
+  display: block;
+  font-size: 2em;
+  font-weight: bold;
+}
+.f1s {
+  padding-top: 20px;
+  display: block;
+  line-height: 15px;
+}
+div#sidebar {
+  background: #f4f4f4;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 15px 0 30px 30px;
+  border-right: 1px solid #bbb;
+  box-shadow: 0 0 20px #ccc; -webkit-box-shadow: 0 0 20px #ccc; -moz-box-shadow: 0 0 20px #ccc;
+}
+div#sidebar h1 a {
+  color: #4d4d4d;
+  text-decoration: none;
+}
+.toc a, .toc a:visited {
+  display: block;
+  color: #4d4d4d;
+  font-weight: bold;
+  margin-top: 5px;
+  text-decoration: none;
+}
+  .toc a:hover {
+    text-decoration: underline;
+  }
+  #sidebar .version {
+    font-size: 10px;
+    font-weight: normal;
+  }
+.toc ul {
+  font-size: 12px;
+  line-height: 13px;
+  margin: 10px 0px;
+  padding-left: 15px;
+  font-family: Lucida Grande;
+  list-style: dash;
+}
+.toc li {
+  cursor: pointer;
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+.toc > ul {
+  padding-left: 0px;
+  list-style: none;
+}
+.toc > ul > li {
+  margin: 30px 0px;
+}
+.toc li a {
+  text-decoration: none;
+  color: #4d4d4d;
+}
+.toc > ul > li > a {
+  text-decoration: underline;
+}
+.toc li a:hover {
+  text-decoration: underline;
+}
+input#function_filter {
+    width: 80%;
+}
+div.container {
+  max-width: 750px;
+  margin: 40px 0 50px 360px;
+}
+img#logo {
+  width: 396px;
+  height: 69px;
+}
+div.warning {
+  margin-top: 15px;
+  font: bold 11px Arial;
+  color: #770000;
+}
+p {
+  margin: 20px 0;
+  max-width: 750px;
+}
+a, a:visited {
+  color: #444;
+}
+a:active, a:hover {
+  color: #4d4d4d;
+}
+h1, h2, h3, h4, h5, h6 {
+  padding-top: 20px;
+  color: #0099e6;
+}
+  h2 {
+    font-size: 20px;
+  }
+b.header {
+  font-size: 16px;
+  line-height: 30px;
+}
+span.alias {
+  font-size: 14px;
+  font-style: italic;
+  margin-left: 20px;
+}
+table, tr, td {
+  margin: 0; padding: 0;
+}
+  td {
+    padding: 2px 12px 2px 0;
+  }
+  table .rule {
+    height: 1px;
+    background: #ccc;
+    margin: 5px 0;
+  }
+ul {
+  list-style-type: circle;
+  padding: 0 0 0 20px;
+}
+  li {
+    margin-bottom: 5px;
+  }
+  code {
+    font-family: Monaco, Consolas, "Lucida Console", monospace;
+  }
+  .container code {
+    color: #a00;
+    background-color: #ddd;
+    padding: 4px;
+    border-radius: 5px;
+  }
+  .container code, .container pre, .container tt {
+    font-family: Monaco, Consolas, "Lucida Console", monospace;
+    font-size: 12px;
+    line-height: 18px;
+    font-style: normal;
+  }
+    tt {
+      padding: 0px 3px;
+      background: #fff;
+      border: 1px solid #ddd;
+      zoom: 1;
+    }
+    .container pre, .container blockquote {
+      border-left: 5px solid #bbb;
+      margin: 0px 0 30px;
+      padding: 0px 15px;
+    }
+    .container pre {
+      font-size: 12px;
+      padding: 2px 0 2px 15px;
+      margin: 0px 0 30px;
+    }
+    .container pre code {
+      color: #4d4d4d;
+      background: none;
+    }
+@media only screen and (-webkit-min-device-pixel-ratio: 1.5) and (max-width: 640px),
+      only screen and (-o-min-device-pixel-ratio: 3/2) and (max-width: 640px),
+      only screen and (min-device-pixel-ratio: 1.5) and (max-width: 640px) {
+  img {
+    max-width: 100%;
+  }
+  div#sidebar {
+    -webkit-overflow-scrolling: initial;
+    position: relative;
+    width: 90%;
+    height: 120px;
+    left: 0;
+    top: -7px;
+    padding: 10px 0 10px 30px;
+    border: 0;
+  }
+  img#logo {
+    width: auto;
+    height: auto;
+  }
+  div.container {
+    margin: 0;
+    width: 100%;
+  }
+  p, div.container ul {
+    max-width: 98%;
+    overflow-x: scroll;
+  }
+  pre {
+    overflow: scroll;
+  }
+}
+</style>
+
+<div id="sidebar">
+
+<h1>Seabsd Community</h1>
+  <div class="toc">
+    <ul>
+<li><a href="#home">Home</a><ul>
+<li><a href="#disclaimer">Disclaimer of values</a></li>
+<li><a href="#contact">Contact</a></li>
+<li><a href="#donation">Donation</a></li>
+<li><a href="https://hhub.seabsd.crypto.bs/">Login</a></li>
+</ul>
+</li>
+  <li><a href="#contact">FAQ</a><ul>
+  <li><a href="#faq1">How to join?</a></li>
+  <li><a href="#faq2">How to start?</a></li>
+  <li><a href="#faq3">Learn on crypto-panarchism?</a></li>
+  <li><a href="#faq4">How can I help or support?</a></li>
+</ul>
+</li>
+
+  </div>
+  <img src="side.jpeg" width="85%" alt="generic catamaran image, not one of us">
+  <small><p class="f1s"><font color="#bfbfbf"><i>Office of Information Technology<br>Department of 
+Cryptology<br>University of The Bahamas<br>PO Box N4912<br>Nassau NP<br>The Bahamas</i></p></font></small>
+</div>
+
+<div id="container" class="container">
+  <!-- <img src="ms3.png" width="100%" alt="generic catamaran image, not one of us"> -->
+    <img src="mus1.png" width="100%" alt="some catamaran image">
+  <h1 id="home">seabsd.crypto.bs</h1>
+<p id="disclaimer">  Seasteading Bahamas Denizens (seabsd) is a community of sailors and boaters around the 
+world who frequently meet and live (hence, denizens) in the Caribbean region of Bahamas. This community is 
+built around the values of crypto-panarchism and we’ve built a living trust chain of boaters mutually 
+respecting, serving and supporting ourselves as individuals, families and society. </p>
+
+<p>We started the community counting 8 boats and 26 people on late 2013, and now, in 2021, we are 163 boats, 
+mostly multihull, and 182 families almost reaching the so called Aristotelian “ideal” size for a 
+community to fully develop it’s abilities and deploy division and specialization of labor. Today we are 
+able to provide liberal basic education (trivium & quadrivium) to toddlers, children and teens; we are able 
+to provide applied mathematics, advanced logic, cryptography and computer programming classes to adults 
+preparing to enter the market; we are also able to teach economics, from family and personal finance to 
+macro economy. We are able to provide health services, medicine (including some medicines produced within 
+the community) and fundamental health aid. As seasteaders, we are mostly an exterritorial covenant 
+community, depending on territorial members only to exchange and trade farmed goods - including red meat for 
+the ones of us who can’t live eating only fishing meat. And yes, we have the booze and the beer. Finally 
+and most important, we own a small marina in Bimini and two shipyards in the keys, used for sailboat 
+maintenance and repairs (minor to complex) on cats and multihulls made of duralumin, wood and composite.</p>
+
+<p>Our society is founded entirely on values of private property and exchange. Bootstrapping from cypher and 
+crypto-panarchism, we share primary values of non aggression [or micro-aggression] towards one’s body and 
+mind (maximizing body and psique integrity), deriving liberty, property of production and exchange as the 
+whole set of ethical values not to initiate aggression against. Conflicting interests are rare, but upon 
+rising, disputes are privately arbitrated. We prefer TRB private dispute resolution scheme. We derive 
+justice from ethics and ethics from laws. We are mostly stateless, exterritorial. A trust ring of private 
+invitation only [sailboat] owners. A friendly, happy and peaceful voluntary private society opting-out (or 
+stealthily avoiding) coercive government.</p>
+
+<p>We strongly support and wish best success to the Seasteading Institude, Ocean Builders and other similar 
+entrepreneurship human agency researching and building engineering tech to allow future means to 
+seasteading. We support (how could we not) the DEFCON’s Hack The Sea Village.</p>
+
+<p>Stealthy existence means we maximize privacy and identity confidentiality. Crypto-panarchists means we 
+maximize cryptography and cyphertext communication within social and economics engagement. Real names are 
+only listed in the intranet for members who want it. Screen names and nicknames are preferred. Private notes 
+for people and business are encrypted by individual private keys. Always remember to ask permission before 
+taking pictures. </p>
+
+<p>We prefer PQCrypto. Abuse it!</p>
+
+<p>We support Crypto-Cat and will horn on honoring of every boat traded with crypto. We prefer 
+cryptocurrency trades , XMR and BTC primarily. We have our own BSD stablecoin, exchanged at the rate of 
+~0.95 BSD or Sand Dollar (Bahamian Dollar in traditional fiat and CBDC forms) which is always exchangeable 
+into XMR. It means we use and accept BSD for trades outside our community.</p>
+
+<p>This information is publicly available as a disclaimer of values ahead of intersocial voluntary 
+engagements.</p>
+
+<p id="donation">Donations are accepted and will be used exclusively in rescue and support of boats and 
+boaters. Donations in BTC can be sent to <code>1B1AZ7cjhmTcdjE6Xq4um3dCLode1RrfTJ</code> and donations in 
+XMR (monero is prefered) can be sent to 
+<code>48tLCRxL9VG585VHciNftEHSoJszpzKhHDLQuKMTzvm1hVXDQa24A6H9v1GVkGQ5V6FhtsXv297tZEJggXiindqWKCHK3wX</code>.</p>
+
+<p id="login">To reach the intranet, <u>VPN in</u> and <a href="https://hhub.seabsd.crypto.bs/">login from 
+web</a> or <a href="ssh://shell.seabsd.crypto.bs">ssh in</a>. <class id="contact">For questions</class>, <a 
+href="mailto:seabsdcrypto@protonmail.com">contact</a> the rotating secretary.</p>
+
+<h1>FAQ (Frequently Asked Questions)</h1>
+<p>This is the frequently asked questions we've been asked in person or via e-mail, it's useful for 
+contractor, friends and people who want to fork such a community.</p>
+
+<h3 id="faq1">a) How can I join the community?</h3>
+<p> You can’t. We are an invitation-only community, if you are a friend and party of trade, you probably 
+know some of us and you might be invited in the future. Invitation is discussed internally and as a 
+trust-chain, a couple participants need to trust you in advance, before you are introduced to everyone else.
+
+<h3 id="faq2">b) How can I start my own seasteading crypto-panarchist community?</h3>
+<p><i>Write the code. Code your community.</i> Decide upon smart contract formats. Discuss the signature 
+format. Assert the communication patterns. Make sure you have real value to offer to each other as a group, 
+as a family, to further become a hardened social community. Make sure the key participants are comfortable 
+with choosen media and tech. Make sure every initial participants share the same values - stress it out. 
+
+<p>Make sure you are comfortable with the crypto-panarchist manifesto and values. Decide which explicit 
+terms are likely to be the minimal norms everyone should follow. Don’t go beyond the minimum! Code the 
+smart contract. Consider coding an escrow smart contract with non-leverageable deposit guarantees for higher 
+value economic business engagement. Pick your social platform for online engagements (we use HumHub with 
+custom IPFS, trust-chain and smart-contracts modules).
+
+<p>Finally, the biggest challenge: avoid going illegal; choose a country with loose regulations and great 
+freedom. While today's state of naval engineering does not allow for full time living in international 
+waters, you will often need land support. This is why we are settle in Caribbean: great people, great food, 
+great liberty, little and loose regulations, private property and private law friendly waters. We have 
+friends living in exterritorial crypto-panarchist communities onshore in Central America and Mexican 
+Caribbean as well as Italian autonomous regions. Follow professor Tom W. Bell’s insights on special 
+economic zones. Become stateless! Terminate your tax payment obligations in your country of origim and seek 
+for countries you won’t become a global taxpayer. Avoiding long-term living in the same country is easier 
+for seasteaders who are often visitors worldwide and unnecessary if seasteading on friendly waters, but it 
+might be an additional challenge for onshore communities.
+
+<p>Your community will be as great as the people who gather. Don’t rush growing it. Grow it healthy. Build 
+a trust chain before you build a community. Finally, decide upon private dispute resolution schemes (we’ve 
+chosen Udine TRB) and preferred currencies.
+
+<h3 id="faq3">c) How can I learn more about crypto-panarchy?</h3>
+
+<p>Learn about crypto-anarchism and cypherpunks first. There are books, Wikipedia entries, Tim May’s 
+cyphernomicon FAQ, things we won’t link here not to be logged in someone else’s user-agents referral. 
+But you can find it yourself. Next, learn about de Puydt’s Panarchy. Read the book <i>“Panarchy: 
+Political Theories of Non-Territorial States”</i>. Check Tim May and 0xff4’s discussions upon 
+polycentric laws. After or while that, you will be able to find The Crypto-Panarchist Manifesto and The 
+Crypto-Panarchist book on the distributed net, on Web 3.0, TOR network and maybe at the surface.
+
+<h3 id="faq4">d) How can I help or support your initiative?</h3>
+
+<p>Other than <a href="#donation">donating</a>? If you can, please pin us! So we can be permanently 
+available in more distributed nodes at the distributed IPFS web. Pinning us is as simple as <code>ipfs pin 
+add -r /ipns/seabsd.crypto.bs</code> ! We thank you in advance for hosting a copy of our public website. 
+Still want to help? Help yourself, your family and friends: if you can pin us, you can do IPFS, so please 
+teach everyone you can about it! And about distributed finances, crypto, remailers, privacy, applied crypto, 
+DNS, Web 3.0, blockchain smart contracts, Linux, BSD, digital money, digital ledgers, DAOs, cryptoconomy, 
+distributed nets, <i>open source</i> sw, read and tell your network to read Voshmgir's <i>"Token 
+Economy"</i> book. Take Richard Feynman's and Conway's advices for life. Teach twice what you've learned. 
+Learn twice what you are teaching. Write code. Write equations. Hack all the things. Reject initiation of 
+violence. These will be of great help!
+
+</div>
+
+</body>
+</html>
+
+
