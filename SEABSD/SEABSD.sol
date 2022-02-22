@@ -1,7 +1,7 @@
 /**
  * (0x%x,2909) Solo une altro contratta che ho fatto. Nel codice ci fidiame. In crito e rifugio. Crito-difese à vita.
  * 
- * Author: (0x%x,2909) 2021 Crypto Fix Finance and Contributors. BSD 3-Clause Licensed. Migrated from SeaBSD's Tari/Rust to Solidity
+ * Author: 2021 Crypto Fix Finance and Contributors. BSD 3-Clause Licensed.
  * Baseate ni Putanas.
  * Passed compliance checks by 0xFF4 marked XFC.
  * Final version: need to change router and wallet_xxx only.
@@ -14,39 +14,42 @@
  * v0.5.3 added hash based signature to private agreements
  * v0.5.4 wdAgreement implemented, however EVM contract size is too large, reduced optimizations run as low as 50
  * v0.5.5 refactored contract due to size limit (added a library, merged functions, converted public, shortened err messages, etc)
+ * v0.5.6 VolNI & DAO as external contracts interacting with main contract due to contract size and proper architecture 
  * 
  * XXXTODO (Feature List F#):
  * - {DONE} (f1) taxationMechanisms: HOA-like, convenant community (Hoppe), Tax=Theft (Rothbard), Voluntary Taxation (Objectivism)
  * - {DONE} (f2) reflection mechanism
  * - {DONE} (f3) Burn/LP/Reward mechanisms comon to tokens on the surface
  * - {DONE} (f4) contract management: ownership transfer, resignation; contract lock/unlock, routerUpdate
- * - DAO: contractUpgrade, transfer ownership to DAO contract for management 
- * - {DONE} (f6) creare un meccanismo che addebita una commissione solo per le transazioni in piscina, una commissione sul servizio di non circolazione.
- * - {DONE} (f7) v5.1 portafoglio di assicurazioni sanitarie con collaborazione automatica (portafoglio sanitario) e assicurazioni di proprietà private/barca a vela 
- * - {DONE} (f8) quantificar recolhimentos individuais para essa wallet saude. 
- * - {DONE} (f9) meccanismo contrattuale arbitrato setAgreement(hashDoc,multa,arbitragemScheme,tribunalPrivado,wallet_juiz,assinatura,etc)
- * - meccanismo di imposta sul reddito negativo (maybe import from SeaBSD)
- * - {DONE} (f11) v5.1 [trustChain] implementar modelo 0xff4 (DEFCON-like): ontologia da confianca 1:N:M
+ * - (f5) DAO: contractUpgrade, transfer ownership to DAO contract for management 
+ * - {DONE} (f6) criar um mecanismo que cobra taxa apenas de transacoes na pool, taxa sobre servico nao circulacao.
+ * - {DONE} (f7) v5.1 add auto health wallet (wallet_health) and private SailBoat insurance (wallet_sailboat||wallet_health)
+ * - {DONE} (f8) account individual contributors to health wallet. 
+ * - {DONE} (f9) arbitrated contract mechanism setAgreement(hashDoc,multa,arbitragemScheme,tribunalPrivado,wallet_juiz,assinatura,etc)
+ * - (f10) mechanism for NI (negative income) (maybe import from Seasteading Bahamas Denizens (SeaBSD)
+ * - {DONE} (f11) v5.1 [trustChain] implement 0xff4 trust chain model (DEFCON-like): trust ontology cardinality 1:N:M
  * - {DONE} (f12) v5.1 [trustChain] firstTrustee, trustPoints[avg,qty], whoYouTrust, whoTrustYou, contractsViolated, optOutArbitrations(max:1)
  * - {DONE} (f13) v5.1 [trustChain] nickName, pgpPubK, sshPubK, x509pubK, Gecos field, Role field
  * - {DONE} (f14) v5.1 [trustChain] if you send 0,57721566 tokens to someone and nobody trusted this person before, you become their spFirstTrusteer 
- * - {FATTO} (f15) crea un meccanismo per consentire al Pool di negoziare solo con persone fidate
- * - {FATTO} (f16) crea un meccanismo di deposito a garanzia generico e consente all'amministratore di arbitrare un contratto arbit
+ * - {DONE} (f15) add mechanism to pool negotiation with trustedPersona only
+ * - {DONE} (f16) add generic escrow mechanism allowing the private arbitration (admin) on the trust chain [trustChain]
  * 
  * Before you deploy:
  * - Change CONFIG:hardcoded definitions according to this crypto-panarchy immutable terms.
  * - Change wallet_health initial address.
+ * - Security Audit is done everywhere its noted
  **/
 
 pragma solidity ^0.8.7;
-// SPDX-License-Identifier: BSD 3-Clause Licensed. Author: (0x%x,2909) Crypto Fix Finance 
+// SPDX-License-Identifier: BSD 3-Clause Licensed.
+//Author: (0x%x,2909) Crypto Fix Finance 
 
 // Declara interfaces do ERC20/BEP20/SEP20 importa BCP do OZ e tbm interfaces e metodos da DeFi
 import "inc/OZBCP.sol";
 import "inc/DEFI.sol";
-import "inc/LIBSEABSD.sol";
- 
-contract SEABSDv5 is Context, IERC20, Ownable {
+import "inc/LIBXFFA.sol";
+
+contract XFFAv5 is Context, IERC20, Ownable {
     using SafeMath for uint256; // no reason to keep using SafeMath on solic >= 0.8.x
     using Address for address;
  
@@ -115,10 +118,10 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
  
-    string private constant _name = "SeaBSD"; // Auditoria XFC-05: constante
-    string private constant _symbol = "SEABSD"; //Auditoria XFC-05: constante
+    string private constant _name = "Coin 0xFF4"; // Auditoria XFC-05: constante
+    string private constant _symbol = "XFFA"; //Auditoria XFC-05: constante
  
-    uint256 private _maxTassazione = 8; // tassazione mass hello Trieste Friulane (CONFIG:hardcoded)
+    uint256 private _maxTassazione = 8; // tassazione massima, hello Trieste Friulane (CONFIG:hardcoded)
     uint256 private _taxFee = 1; // taxa pra dividendos
     uint256 private _previousTaxFee = _taxFee; // inicializa
  
@@ -175,12 +178,13 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         _rOwned[_msgSender()] = _rTotal;
  
         //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E); // PRD
-        //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x928Add24A9dd3E76e72aD608c91C2E3b65907cdD); // Endereco da DeFi na Kooderit (FIX)
+        //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x928Add24A9dd3E76e72aD608c91C2E3b65907cdD); // Address for DeFi at Kooderit (FIX)
         //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0xD99D1c33F9fC3444f8101754aBC46c52416550D1); // BSC Testnet
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7186Fe885Db3402102250bD3d79b7914c61414b1); // Crypto FIX Finance (FreeBSD)
-
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7186Fe885Db3402102250bD3d79b7914c61414b1); // CryptoFIX Finance (FreeBSD)
+        
          // Cria o parzinho Token/COIN pra swap e recebe endereco
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
+        //uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), address(0x465e07d6028830124BE2E4aA551fBe12805dB0f5)); // Wrapped XMR (Monero)
  
         // recebe as outras variaveis do contrato via IUniswapV2Router02
         uniswapV2Router = _uniswapV2Router;
@@ -334,14 +338,14 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         _tFeeTotal = _tFeeTotal.add(tFee);
     }
  
-    // Funcao veio do SM/OZ
+    // From SM/OZ
     function _getValues(uint256 tQuantia) private view returns (uint256, uint256, uint256, uint256, uint256, uint256) {
         (uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getTValues(tQuantia);
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tQuantia, tFee, tLiquidity, _getRate());
         return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee, tLiquidity);
     }
  
-    // Funcao veio do SM/OZ
+    // From SM/OZ
     function _getTValues(uint256 tQuantia) private view returns (uint256, uint256, uint256) {
         uint256 tFee = calculateTaxFee(tQuantia);
         uint256 tLiquidity = calculateLiquidityFee(tQuantia);
@@ -349,7 +353,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         return (tTransferAmount, tFee, tLiquidity);
     }
  
-    // Funcao veio do SM/OZ
+    // From SM/OZ
     function _getRValues(uint256 tQuantia, uint256 tFee, uint256 tLiquidity, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
         uint256 rAmount = tQuantia.mul(currentRate);
         uint256 rFee = tFee.mul(currentRate);
@@ -358,13 +362,13 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         return (rAmount, rTransferAmount, rFee);
     }
  
-    // Funcao veio do SM/OpenZeppelin
+    // From SM/OpenZeppelin
     function _getRate() private view returns(uint256) {
         (uint256 rSupply, uint256 tSupply) = _getCurrentSupply();
         return rSupply.div(tSupply);
     }
  
-    // Funcao veio do SM/OpenZeppelin
+    // From SM/OpenZeppelin
     function _getCurrentSupply() private view returns(uint256, uint256) {
         uint256 rSupply = _rTotal;
         uint256 tSupply = _tTotal;      
@@ -377,7 +381,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         return (rSupply, tSupply);
     }
 
-    // Recebe liquidez
+    // Recebe liquidity
     function _takeLiquidity(uint256 tLiquidity) private {
         uint256 currentRate =  _getRate();
         uint256 rLiquidity = tLiquidity.mul(currentRate);
@@ -902,7 +906,7 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     function wdAgreement(uint256 _aid) public {
         require(_privLawAgreement[_aid].deposit==1 && _privLawAgreement[_aid].finePaid[_msgSender()]==1,"E: not paid"); // Withdrawal: you never paid deposit for this agreement id
         require(_privLawAgreement[_aid].fine>0,"E: nothing to wd"); // Withdrawal: nothing to withdrawal, agreement charged no fine"
-        require(balanceOf(address(this))>=_privLawAgreement[_aid].fine,"E: contract balance is too low"); // Withdrawal: contract balance is too low, arbitrator or crypto-panarchy administration should fund it
+        require(balanceOf(address(this))>=_privLawAgreement[_aid].fine,"E: contract balance too low"); // Withdrawal: contract balance is too low, arbitrator or crypto-panarchy administration should fund it
         require((_privLawAgreement[_aid].state[_msgSender()]==4 || _isSettledAgreement(_aid)),"E: wd not ready"); // Withdrawal: sorry, agreement is neither settled or arbitrated to your favor
 
         /** Precisamos definir o valor. Possibile logica aziendale:
@@ -946,12 +950,12 @@ contract SEABSDv5 is Context, IERC20, Ownable {
         for (uint256 n=0; n<s; n++) { tP.add(1); } // tP++
         
         if (msg.sender==_privLawAgreement[_aid].arbitrator) { // arbitrator withdrawal
-           require(_privLawAgreement[_aid].state[_msgSender()]!=91); // Withdrawal: arbitrator fee already claimed
+           require(_privLawAgreement[_aid].state[_msgSender()]!=91,"E: already paid"); // Withdrawal: arbitrator fee already claimed
             wdValue=f;
             _privLawAgreement[_aid].state[msg.sender]=91; // mark 91
         } else { // signee withdrawal
-            require(_privLawAgreement[_aid].state[_msgSender()]!=41); // "Withdrawal: signee disputed fine already claimed"
-            wdValue=( (D*s) - f / (s-tP) ); // the formula debated for this panarchy
+            require(_privLawAgreement[_aid].state[_msgSender()]!=41,"E: already paid"); // "Withdrawal: signee disputed fine already claimed"
+            wdValue=( (D*s) - f / (s-tP) ); // Der formulae für diesen Panarchy debattiert 
             _privLawAgreement[_aid].state[msg.sender]=41; // mark 41
         }
        
@@ -963,9 +967,10 @@ contract SEABSDv5 is Context, IERC20, Ownable {
     // 21=friendly_withdrawaled, 41=disputed_wdled, 91=arbitrator_wdled 99=disputed_outside(ostracized)
     // T:PEND:(f16):Allows signee to enter dispute, enter friendly agreement and allows court to arbitrate disputes
     function setArbitration(uint256 _aid, uint256 _state, address _signee) public returns(bool) {
-        if (_privLawAgreement[_aid].state[msg.sender]!=1||_privLawAgreement[_aid].arbitrator!=_msgSender()) {
+        require((_privLawAgreement[_aid].state[msg.sender]!=1||_privLawAgreement[_aid].arbitrator!=_msgSender()),"A2: not signee/court"); // never signed and is not arbitrator, do nothing
+        /*if (_privLawAgreement[_aid].state[msg.sender]!=1||_privLawAgreement[_aid].arbitrator!=_msgSender()) {
             return false; // never signed and is not arbitrator, do nothing
-        } else {
+        } else { */
             if (_privLawAgreement[_aid].arbitrator==_msgSender() && _state==99) { // worst scenario, arbitrator informs disputed outside
                 _privLawAgreement[_aid].state[_signee]=99; // set state to 99
                 _selfDetermined[_signee].spContractsViolated++; // violated contract
@@ -986,13 +991,87 @@ contract SEABSDv5 is Context, IERC20, Ownable {
                 }
             }
               
-        }
+        //}
         return true;
-        
     }
-
-    
     
 } //EST FINITO
 
+/*
+ * Due to contract size restrictions I am continuing the implementation in a second contract called VolNI which continues
+ * using all the public interfaces from the original Crypto-Panarchy contract. It's a weird design decision which I was
+ * mostly forced due to Solidity's actual limitations. Luckily all relevant calls were made public to export to Web3js front.
+ * I am not fully implementing Hayek's idea because I disagree (and Mises does too, you bunch of socialists), therefore
+ * volNiAddFunds() is still voluntary, one must donate! Belevolence! And members of the trust chain who need money may claim
+ * a share every 15 days. 
+ */
+contract VolNI is Ownable {
+    using SafeMath for uint256;
+    using Address for address;
+    
+    string public name = "Voluntary Negative Income";
+    address public panarchyAdmin;
+    address public panaddr;
+    mapping (address => uint256) donatesum;
+    
+    struct volNiSubjProperties {
+        uint256 lastClaimedDate;
+        uint256 donateSum;
+    }
+    mapping (address => volNiSubjProperties) private _volniSubject;
+    uint256[3] public benevolSubjStats; // [ epoch, numSubj, totalValue ]
+    
+    event  Deposit(address indexed who, uint amount);
+    
+    constructor (address _panarchy_addr) {
+        panaddr = _panarchy_addr;
+        //panarchy = new XFFAv5();
+    }
+    
+    /*receive() external payable { deposit(); }
 
+    function deposit() public payable {
+        p.balanceOf[msg.sender] += msg.value;
+        emit Deposit(msg.sender, msg.value);
+        _volniSubject[msg.sender].donateSum.add(_amount);
+    }*/
+    
+    XFFAv5 p = XFFAv5(payable(panaddr));
+    
+    function mygetAgreementSignees(uint256 _aid) public view returns(address[] memory) {
+        return(p.getAgreementSignees(_aid));
+    }
+    function myPrintParentAddr() public view returns(address) {
+        return (panaddr);
+    }
+    function Finger(address _who) public view returns(string memory _sPgpPubK,string memory _sSshPubK,string memory _sX509PubK,string memory _sGecos,uint256 _sRole, string memory _sNickname) {
+        return (p.Finger (_who));
+    }
+    function volNiAddFunds(uint256 _amount) public {
+        require (p.balanceOf(msg.sender)>=_amount,"ERC20: Insufficient balance to donate funds to Voluntary NI");
+        p.approve(msg.sender, _amount); //  _approve(_msgSender(), spender, amount);
+        p.transfer(address(this), _amount);
+        _volniSubject[msg.sender].donateSum.add(_amount);
+    }
+    function volNiBalance() public view returns(uint256) {
+        return (p.balanceOf(address(this)));
+    }
+    function volNiClaim() public {
+        require(_volniSubject[msg.sender].lastClaimedDate<=(block.timestamp+1296580),"A2: already claimed within last 15 days"); // 1296580 = 15d 8h
+        uint256 wdValue=100;
+        //uint256 wdValue=(p.balanceOf[address(this)].div(benevolSubjStats[1])); // predict monthly NI based on num of beneficiaries from last period
+        require(p.balanceOf(address(this))>=wdValue/2,"A2: insuficient funds, invite convenant members to donate");
+        
+        p.approve(address(this), wdValue.div(2)); // divided by two for splitting claims every 15days
+        p.transfer(msg.sender, wdValue.div(2));
+        
+        if (benevolSubjStats[0] <= (block.timestamp-2593160)) benevolSubjStats = [ 0, 0, 0 ]; // reset statistics after 1 month
+        benevolSubjStats = [ block.timestamp, benevolSubjStats[1].add(1), benevolSubjStats[2].add(wdValue.div(2))]; // monthly statistics
+        _volniSubject[msg.sender].lastClaimedDate=block.timestamp;
+    }
+}
+ 
+ */
+ * TODO: so far wdValue is static, I should make it make it a DAO decision. Also test for min balance of claimer and
+ * track it because low time preference individuals should be detected and are not welcome to get money from this pool.
+ */
