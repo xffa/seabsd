@@ -52,7 +52,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
     using SafeMath for uint256; // no reason to keep using SafeMath on solic >= 0.8.x
     using Address for address;
  
-    // Declare interfaces for ERC20/BEP20/SEP20, import BCP from OZ, as well as interfaces and methods for DeFi.
+    // Some properties are particular to the self who is self=(msg.sender) and jungian selfPersona (how self is seem or presents himself)
     struct selfProperties {
         string sNickname; // name yourself if/how you want: avatar, nick, alias, PGP key, x-persona
         uint256 sTaxFee;
@@ -249,30 +249,53 @@ contract XFFAv5 is Context, IERC20, Ownable {
  // XFC-04 Compliance: Documenting withdrawal function. It used to be reflect() in the token reflect.
  // Implement a mechanism in Web3 to facilitate usage. (f2)
     function wdSaque(uint256 tQuantia) public notPhysicallyRemoved() {
-       // Implementation goes here
+        address remetente = _msgSender();
+        require(!_isExcludedR[remetente], "A2: ur excluded"); // Excluded address can not call this function
+        (uint256 rAmount,,,,,) = _getValues(tQuantia);
+        _rOwned[remetente] = _rOwned[remetente].sub(rAmount);
+        _rTotal = _rTotal.sub(rAmount);
+        _tFeeTotal = _tFeeTotal.add(tQuantia);
     }
     
 // To calculate the token count much more precisely, you convert the token amount into another unit.
 // This is done in this helper function: "reflectionFromToken()". The code came from the Reflect Finance project. (f2)
     function reflectionFromToken(uint256 tQuantia, bool deductTransferFee) public view returns(uint256) {
         require(tQuantia <= _tTotal, "E:Amount > supply"); // Amount must be less than supply"
-        // Implementation goes here
+        if (!deductTransferFee) {
+            (uint256 rAmount,,,,,) = _getValues(tQuantia);
+            return rAmount;
+        } else {
+            (,uint256 rTransferAmount,,,,) = _getValues(tQuantia);
+            return rTransferAmount;
+        }
     }
  
 // Inverse operation. (f2)
     function tokenFromReflection(uint256 rAmount) public view returns(uint256) {
         require(rAmount <= _rTotal, "E:Amount > reflections total"); // Amount must be less than total reflections
-       // Implementation goes here
+        uint256 currentRate =  _getRate();
+        return rAmount.div(currentRate);
     }
  
     function excluiReward(address account) public onlyOwner() {
         require(!_isExcludedR[account], "Already excluded");
-        // Implementation goes here
+        if(_rOwned[account] > 0) {
+            _tOwned[account] = tokenFromReflection(_rOwned[account]); // (f2)
+        }
+        _isExcludedR[account] = true;
+        _excluded.push(account);
     }
  
     function incluiReward(address account) external onlyOwner() {
         require(_isExcludedR[account], "Not excluded"); // Auditoria XFC-06 Account is not excluded
-        // Implementation goes here
+        for (uint256 i = 0; i < _excluded.length; i++) {
+            if (_excluded[i] == account) {
+                _excluded[i] = _excluded[_excluded.length - 1];
+                _tOwned[account] = 0;
+                _isExcludedR[account] = false;
+                _excluded.pop();
+                break;
+            }
         }
     }
     
