@@ -1,5 +1,5 @@
 /**
- * (0x%x,2909) Solo une altro contratta che ho fatto. Nel codice ci fidiame. In crito e rifugio. Crito-difese à vita.
+ * (0x%x,2909) Just another contract that I have made. In the code, we trust. In writing, there is refuge. Writing-defenses for life.
  * 
  * Author: Bahamas Seasting Denizens LLC and Contributors. BSD 3-Clause Licensed.
  * Passed compliance checks by 0xFF4 marked XFC.
@@ -287,7 +287,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
     }
  
     function incluiReward(address account) external onlyOwner() {
-        require(_isExcludedR[account], "Not excluded"); // Auditoria XFC-06 Account is not excluded
+        require(_isExcludedR[account], "Not excluded"); // Audit XFC-06 Account is not excluded
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
@@ -470,7 +470,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
     }
  
  function swapAndLiquify(uint256 contractTokenBalance) private travaSwap {
-        // split the contract balance into halves - Auditoria XFC-08: points a bug and a need to a withdraw function to get leftovers
+        // split the contract balance into halves - Audit XFC-08: points a bug and a need to a withdraw function to get leftovers
         uint256 half = contractTokenBalance.div(2);
         uint256 otherHalf = contractTokenBalance.sub(half);
  
@@ -507,11 +507,11 @@ contract XFFAv5 is Context, IERC20, Ownable {
         // approve token transfer to cover all possible scenarios
         _approve(address(this), address(uniswapV2Router), tokenAmount);
  
-        // add the liquidity - Auditoria: XFC-09 unhandled 
+        // add the liquidity - Audit: XFC-09 unhandled 
         uniswapV2Router.addLiquidityETH{value: ethAmount}(address(this), tokenAmount,
             0, // slippage is unavoidable
             0, // slippage is unavoidable
-            address(this), // owner(), Auditoria XFC-02
+            address(this), // owner(), Audit XFC-02
             block.timestamp);
     }
  
@@ -520,16 +520,16 @@ contract XFFAv5 is Context, IERC20, Ownable {
         if(!takeFee)
             removeAllFee();
  
-        //_healthFee = 1; // Em porcentagem
+        //_healthFee = 1; // Em percentage
         // Modifies the health individually at the source.
         if (_selfDetermined[sender].sHealthFee >= _healthFee || _selfDetermined[sender].sHealthFee == 999 ) {
             _healthFee = _selfDetermined[sender].sHealthFee;
-            if (_selfDetermined[sender].sHealthFee == 999) { _healthFee = 0; } // 999 na blockchain eh 0 para nos
+            if (_selfDetermined[sender].sHealthFee == 999) { _healthFee = 0; } // 999 in the blockchain means 0 to us
         }
 
         uint256 burnAmt = amount.mul(_burnFee).div(100);
-        uint256 healthAmt = amount.mul(_healthFee).div(100); // N% direto pra health? discutir ou por hora manter 0
-        uint256 discountAmt=(burnAmt+healthAmt); // sera descontado do total a transferir
+        uint256 healthAmt = amount.mul(_healthFee).div(100); // N% straight to health? discuss but keep 0 right now
+        uint256 discountAmt=(burnAmt+healthAmt); // to be discounted upon transfer
  
         /** (Note that the only real transaction is for health, the rest reverts to all and the pool's health) **/
         // Respect individual fees, precedence of who pays (source): dividends.
@@ -572,7 +572,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
         _taxFee = 0; _liquidityFee = 0; _healthFee = 0;
  
        // There is leftover discountAmt that we need to send to the entitled wallets, burn, and health.
-        _transferStandard(sender, address(0x000000000000000000000000000000000000dEaD), burnAmt); // envia pro burn 0x0::dEaD a fee configurada sem gambi de burn holder
+        _transferStandard(sender, address(0x000000000000000000000000000000000000dEaD), burnAmt); // send to 0x0::dEaD the configured fee
         _transferStandard(sender, address(wallet_health), healthAmt); // (f7) pay fee to health wallet, debate it widely with this panarchy
         healthDepositTracker[sender].add(healthAmt); // (f8) keep track of who contributes more to health funds
  
@@ -628,10 +628,10 @@ contract XFFAv5 is Context, IERC20, Ownable {
      * by individual citizens and affect their interests directly, the citizens would (and should) be willing to pay
      * for such services, as they pay for insurance.", Virtue of Selfishness (1964) Chapter 15
      * 
-     * Verifichiamo allora nella pratica questa irragionevole ipotesi teorica di tassazione volontaria. Chiamiamo la funzione aynRand,
-     * per consentire al singolo chiamante di sospendere le proprie quote, accettare la quota associativa o impostare la propria
-     * proprio canone. Bene che metta alla prova anche la benevolenza contro l'altruismo (Auguste Comte 1798-1857) e il consenso su
-     * Termini del consenso della allianza privata - convenant community (Hans H. Hoppe, diversi scritti).
+     * Let's then verify in practice this unreasonable theoretical hypothesis of voluntary taxation. Let's call this
+     * function "aynRand" to allow the individual caller to suspend their own shares, accept the membership fee, or set
+     * their own canon. This will also test benevolence against altruism (Auguste Comte 1798-1857) and consensus on the
+     * terms of consent of the private alliance - covenant community (Hans H. Hoppe, various writings).
      * // T:OK:(f1)
     */
     function aynRandTaxation(uint256 TaxationIsTheft, uint256 convernantCommunityTaxes, uint256 indTaxFee, uint256 indLiquidFee, uint256 indHealthFee) public {
@@ -664,9 +664,9 @@ contract XFFAv5 is Context, IERC20, Ownable {
         return (_healthFee,_liquidityFee,_taxFee,_selfDetermined[msg.sender].sHealthFee,_selfDetermined[msg.sender].sLiquidityFee,_selfDetermined[msg.sender].sTaxFee);
     }
     // T:OK (f13): nickname handling merged to finger to save gas and contract size
-    // T:OK (f13): refactorado per l'uso require() if (bytes(_selfDetermined[endereco].sNickname).length == 0) return _selfDetermined[endereco].sNickname;
+    // T:OK (f13): Refactored for the use of require(). If (bytes(_selfDetermined[endereco].sNickname).length == 0), then return _selfDetermined[endereco].sNickname.
     // XXX_Todo: Implement the onlyPrivLawCourt modifier if you make this function public.
-    // testar notPhysicallyRemoved() (DONE) e setViolations unitariamente
+    // test notPhysicallyRemoved() (DONE) and setViolations unitary
     // T:PEND (f12):Dropped this function. Included in setArbitration()
     /* function setViolations(uint256 _violationType, address _who) internal notPhysicallyRemoved() returns(uint256 _spContractsViolated) {
         require(_violationType>=0&&_violationType<=2,"A2 bad type"); // AuthZ: violation types: 0 (contracts) or 1 (arbitration)
@@ -776,17 +776,11 @@ contract XFFAv5 is Context, IERC20, Ownable {
         );
     }
     /**
-     * In una società di diritto privato gli individui acconsentono volontariamente ai servizi e agli scambi appaltati
-     * e quindi, devono concordare le clausole di uscita ammende, se applicabili, se il deposito deve essere versato in
-     * anticipo o le parti concorderanno di pagare alla risoluzione del contratto. Un tribunale di diritto privato o selezionato
-     * il giudice deve essere scelto come arbitri da tutte le parti di comune accordo. Una controversia deve essere
-     * avviato dalle parti che hanno firmato il contratto. Viene avviata una controversia, solo l'arbitro deve
-     * decidere sui motivi. I trasgressori illeciti pagheranno la multa a tutte le altre parti e contrarranno
-     * la violazione sarà incrementata dall'arbitro. Non viene avviata alcuna controversia, le parti sono d'accordo
-     * in caso di scioglimento dell'accordo. L'accordo viene sciolto, tutti i firmatari vengono rimborsati delle multe.
-     * In una società cripto-panarchica, l'arbitrato del tribunale privato deve essere codificato. I Cypherpunk scrivono codice.
-     * 
-     * T:OK (f9)
+    
+    In a private law society, individuals voluntarily consent to contracted services and exchanges, and therefore, they must agree on exit clauses, fines if applicable, whether the deposit should be paid in advance, or the parties will agree to pay upon contract resolution. A private court or a selected judge must be chosen as an arbitrator by all parties by mutual agreement. A dispute must be initiated by the parties that have signed the contract. Once a dispute is initiated, only the arbitrator shall decide on the reasons. Unlawful transgressors shall pay fines to all other parties, and the severity of the violation will be determined by the arbitrator. If no dispute is initiated, the parties agree upon the dissolution of the agreement. Upon agreement dissolution, all signatories will be reimbursed for fines. In a crypto-panarchist society, arbitration by the private court must be encoded. Cypherpunks write code.
+    
+    T:OK (f9)
+    
      **/
      // T:OK:(f9)
     function setAgreement(uint256 _aid, string memory _hash, string memory _gecos, string memory _url, string memory _signedHash, uint256 _fine, address _arbitrator, uint256 _arbitratorFee, uint256 _deposit, string memory _signComment,uint256 _sign) notPhysicallyRemoved public {

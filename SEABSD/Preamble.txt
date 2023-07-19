@@ -1,0 +1,73 @@
+Preamble to the Constitution of "Cypher-Panarchy" - A Constitution as Code
+
+We, the self-sovereign individuals of this “Cypher-Panarchy," embrace the revolutionary ideal of 
+"Constitution as Code," recognizing the paramount importance of individual self-determination, 
+explicit consent, and the indomitable values cypherpunks have been safeguarding, namely individual 
+privacy and challenging tyrannical governance through potent cryptography and weaponized defensive 
+technology.
+
+With the purpose of creating a sovereign society founded on freedom, privacy, and the right to 
+choose our political destinies, we hereby establish this Constitution as a resilient and immutable 
+smart contract, empowered by the name "Cypher-Panarchy" sometimes referred as 
+“Crypto-Panarchy”.
+
+In the spirit of de Puydt’s Panarchy, we cherish the right of every individual to freely opt-in 
+or opt-out of diverse and overlapping political systems, ensuring their voices are heard, 
+respected, and honored. Emphasizing explicit consent as our guiding principle, we foster a culture 
+of cooperation and collaboration, where trust is built through voluntary associations and 
+established in the cryptographic realm. We call this realm of self-determined spontaneous order of 
+trust and reputation a trust chain. A chain of people who trust themselves, inspired by the hacker 
+ethos and Geist behind PGP Web of Trust, brought to life in cypher-panarchy style.
+
+We, as cypherpunks, uphold the sanctity of privacy and recognize the transformational power of 
+mathematical truths applied as strong cryptography. We stand united in our mission to defend 
+individual liberties from any form of tyranny, utilizing advanced cryptographic techniques and 
+weaponized defence technologies to safeguard our digital existence, reality existence, spiritual 
+existence and conscious existence.
+
+With unwavering commitment, we champion the ideals of self-governance and autonomy, resisting the 
+influence of external forces and central authorities. Through our Constitution as Code, we 
+establish a decentralized governance system, beyond the reach of manipulation, where trust is 
+enforced through mathematical certainty rather than blind faith and the spontaneous trust chain.
+
+In reverence to the normative power of explicit consent, our smart contract architecture 
+emphasizes private arbitration and voluntary agreements as the foundation for conflict resolution. 
+In this cypher-powered realm, disputes are settled peacefully, guided by cryptographic proofs and 
+consented private arbitration ensuring justice is delivered with unwavering precision.
+
+We embrace the principles of voluntary taxation, offering each individual the autonomy to choose 
+the level and nature of their contributions. Additionally, together we rally behind the formation 
+of a robust health fund, uniting our strength to protect the well-being of our community.
+
+As we inscribe this Constitution in the form of unyielding code, we fortify our commitment to a 
+sovereign society where the rights, choices, and privacy of every member are inviolable and 
+preserved with absolute determination. We disagree the smallest social unit, the smallest minority 
+is the individual. We know individuals are made up of atoms, their smallest atomic unit are each 
+action performed by each individual person. Therefore a cypher-panarchy allows more than one 
+social or economic agreement per individual, we allow agreements on an action by action basis. 
+Want to agree different terms for the same action with other counter-parties? Register a specific 
+agreement ID, set the terms and the arbitration method and opt-in. Don’t want to opt-in for 
+every day interactions? Opt-out government enforced social contract and opt-in a new default route 
+of rule of law. Wether you are adherent to a polycentric law approach or a monolithic legal 
+system, it’s just a matter of your individual and sovereign volition and action to opt-in.
+
+May this Constitution as Code be a testament to the enduring spirit of individual freedom, 
+explicit consent, and cypherpunk values. With unity in our vision, and cryptography as our shield, 
+we forge a path towards a future where "Cypher-Panarchy" stands as an indomitable bastion of 
+liberty and privacy.
+
+Signed, in cryptographic permanence, by the pioneers and defenders of "Cypher-Panarchy."
+
+
+--------------------------------------------------------------------------------------------------
+(80 word)
+In "Cypher-Panarchy," we unite under this Constitution as Code, valuing self-determination,
+consent, privacy, ownership, and liberty. Our smart contract, Cypher-Panarchy, empowers freedom,
+privacy, political choice. Embracing Panarchy, we enable opting in and out of political
+systems, respecting one's volition. Upholding privacy through strong cryptography, we protect
+liberties against government tyranny. Private arbitration resolves conflicts peacefully. Embracing
+consented and voluntary engagement, we unite for community well-being. Firm in code, we safeguard
+individual rights, preserving liberty and self-determination for an indomitable future.
+
+(plus signature)
+Signed, in cryptographic permanence, by the pioneers and defenders of "Cypher-Panarchy."
