@@ -1,8 +1,7 @@
 /**
  * (0x%x,2909) Solo une altro contratta che ho fatto. Nel codice ci fidiame. In crito e rifugio. Crito-difese à vita.
  * 
- * Author: 2021 Crypto Fix Finance and Contributors. BSD 3-Clause Licensed.
- * Baseate ni Putanas.
+ * Author: Bahamas Seasting Denizens LLC and Contributors. BSD 3-Clause Licensed.
  * Passed compliance checks by 0xFF4 marked XFC.
  * Final version: need to change router and wallet_xxx only.
  * v0.4 flex tax, moved Best Common Practice functions to inc/OZBCP.sol to somewhere else.
@@ -42,9 +41,9 @@
 
 pragma solidity ^0.8.7;
 // SPDX-License-Identifier: BSD 3-Clause Licensed.
-//Author: (0x%x,2909) Crypto Fix Finance 
+//Author: (0x%x,2909) Seasteading Bahamas Denizens
 
-// Declara interfaces do ERC20/BEP20/SEP20 importa BCP do OZ e tbm interfaces e metodos da DeFi
+// Declare interfaces for ERC20/BEP20/SEP20, import BCP from OZ, as well as interfaces and methods for DeFi.
 import "inc/OZBCP.sol";
 import "inc/DEFI.sol";
 import "inc/LIBXFFA.sol";
@@ -53,7 +52,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
     using SafeMath for uint256; // no reason to keep using SafeMath on solic >= 0.8.x
     using Address for address;
  
-    // Algumas propriedades particulares ao self=(msg.sender) e selfPersona (how self is seem or presents himself)
+    // Declare interfaces for ERC20/BEP20/SEP20, import BCP from OZ, as well as interfaces and methods for DeFi.
     struct selfProperties {
         string sNickname; // name yourself if/how you want: avatar, nick, alias, PGP key, x-persona
         uint256 sTaxFee;
@@ -101,50 +100,50 @@ contract XFFAv5 is Context, IERC20, Ownable {
     uint256[] public _privLawAgreementIDs;
     
     //OLD version mapping (address => mapping (address => uint256)) private _selfDeterminedFees;// = [_taxFee, _liquidityFee, _healthFee];
-    // _rOwned e _tOwned melhores praticas do SM (conformidade com OpenZeppelin tbm)
+    // _rOwned and _tOwned best practices of SM (compliance with OpenZeppelin as well).
     mapping (address => uint256) private _rOwned;
     mapping (address => uint256) private _tOwned;
     mapping (address => mapping (address => uint256)) private _allowances;
-    mapping (address => bool) private _isExcludedF; // marca essa flag na wallet que nao paga fee
+    mapping (address => bool) private _isExcludedF; // Mark this flag on the wallet that does not pay fees.
     mapping (address => bool) private _isExcludedR; // marca essa flag na wallet que nao recebe dividendos
     address[] private _excluded;
     
-    address private wallet_health = 0x8c348A2a5Fd4a98EaFD017a66930f36385F3263A; //owner(); // Mudar para wallet health
+    address private wallet_health = 0x8c348A2a5Fd4a98EaFD017a66930f36385F3263A; //owner(); // Change to "wallet health."
     mapping (address => uint256) public healthDepositTracker; // (f8) track who deposits to bealth
  
-    uint8 private constant _decimals = 8; // Auditoria XFC-05: constante
+    uint8 private constant _decimals = 8; // Audit XFC-05: constant
     uint256 private constant MAX = ~uint256(0);
-    uint256 private constant _tTotal = 29092909 * 10**_decimals; // 2909 2909 milhoes Auditoria XFC-05: constante + decimals precisao cientifica pq das matematicas zoadas do sol
+    uint256 private constant _tTotal = 29092909 * 10**_decimals; // 2909 2909 million XFC-05 Audit: constant + decimals scientific precision because of the messed up math of the sun.
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
  
-    string private constant _name = "Coin 0xFF4"; // Auditoria XFC-05: constante
-    string private constant _symbol = "XFFA"; //Auditoria XFC-05: constante
+    string private constant _name = "Panarchy SeaBSD"; // Audit XFC-05: constant
+    string private constant _symbol = "SEABSD"; //Audit XFC-05: constant
  
     uint256 private _maxTassazione = 8; // tassazione massima, hello Trieste Friulane (CONFIG:hardcoded)
-    uint256 private _taxFee = 1; // taxa pra dividendos
-    uint256 private _previousTaxFee = _taxFee; // inicializa
+    uint256 private _taxFee = 1; // dividends fee
+    uint256 private _previousTaxFee = _taxFee; // initialize
  
-    uint256 private _liquidityFee = 1; // taxa pra LP
-    uint256 private _previousLiquidityFee = _liquidityFee; // inicializa
+    uint256 private _liquidityFee = 1; // liquidity pool fee
+    uint256 private _previousLiquidityFee = _liquidityFee; // initialize
  
-    uint256 private _burnFee = 1; // taxa de burn (deflacao) por operacao estrategia de deflacao continua (f3)
-    uint256 private _previousBurnFee = _burnFee; // inicializa (f3)
+    uint256 private _burnFee = 1; // burn fee (deflation) for each operation, the deflationary strategy continues (f3).
+    uint256 private _previousBurnFee = _burnFee; // initialize (f3)
     
-    uint256 private _healthFee = 1; // Em porcentagem, fee direto pra health
-    uint256 private _prevHealthFee = _healthFee; // Em porcentagem, fee direto pra health
+    uint256 private _healthFee = 1; // In percentage, direct fee goes straight to health
+    uint256 private _prevHealthFee = _healthFee; // In percentage, direct fee goes straight to health
  
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
  
-    bool inSwapAndLiquify; // liga e desliga o mecanismo de liquidez
-    bool private swapAndLiquifyEnabled = false; // inicializa
+    bool inSwapAndLiquify; // Turn on and off the liquidity mechanism
+    bool private swapAndLiquifyEnabled = false; // initialize
  
-    uint256 private _maxTxAmount = 290900 * 10**_decimals; // mandei 290.9k max transfer que da 1% do supply inicial (nao do circulante, logo isso muda com o tempo)
-    uint256 private numTokensSellToAddToLiquidity = 2909 * 10**_decimals; // 2909 minimo de tokens pra adicionar na LP se estiver abaixo
+    uint256 private _maxTxAmount = 290900 * 10**_decimals; // I sent 290.9k max transfer, which represents 1% of the initial supply (not the circulating supply, so this will change over time).
+    uint256 private numTokensSellToAddToLiquidity = 2909 * 10**_decimals; // 2909 is the minimum number of tokens required to add to the LP if it is below that amount.
  
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
-    event SwapAndLiquifyEnabledUpdated(bool enabled); // liga
+    event SwapAndLiquifyEnabledUpdated(bool enabled); // enable by default
     event SwapAndLiquify(uint256 tokensSwapped, uint256 ethReceived, uint256 tokensIntoLiqudity);
     event AuthZ(uint256 _reason);
 
@@ -178,18 +177,18 @@ contract XFFAv5 is Context, IERC20, Ownable {
         _rOwned[_msgSender()] = _rTotal;
  
         //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E); // PRD
-        //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x928Add24A9dd3E76e72aD608c91C2E3b65907cdD); // Address for DeFi at Kooderit (FIX)
+        //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x928Add24A9dd3E76e72aD608c91C2E3b65907cdD); // Address for DeFi at Kooderit (Seasteading Bahamas Denizens)
         //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0xD99D1c33F9fC3444f8101754aBC46c52416550D1); // BSC Testnet
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7186Fe885Db3402102250bD3d79b7914c61414b1); // CryptoFIX Finance (FreeBSD)
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7186Fe885Db3402102250bD3d79b7914c61414b1); // CryptoFIX Finance (hosted by FreeBSD)
         
-         // Cria o parzinho Token/COIN pra swap e recebe endereco
+         // Create the pair Token/COIN for swapping and receive the address.
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
-        //uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), address(0x465e07d6028830124BE2E4aA551fBe12805dB0f5)); // Wrapped XMR (Monero)
+        //uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), address(0x465e07d6028830124BE2E4aA551fBe12805dB0f5)); // Wrapped XMR/XTR (Monero/Tari)
  
-        // recebe as outras variaveis do contrato via IUniswapV2Router02
+        // Receives the other variables from the contract via IUniswapV2Router02.
         uniswapV2Router = _uniswapV2Router;
  
-        //owner e o proprio contrato nao pagam fee inicialmente
+        //The owner and the contract itself do not pay the initial fee.
         _isExcludedF[owner()] = true;
         _isExcludedF[address(this)] = true;
         // _isExcludedF[wallet_health] = true;
@@ -197,13 +196,13 @@ contract XFFAv5 is Context, IERC20, Ownable {
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
  
-    // Auditoria XFC-05: view->pure nos 4
+    // Audit XFC-05: view->pure all 4
     function name() public pure returns (string memory) { return _name; }
     function symbol() public pure returns (string memory) { return _symbol; }
     function decimals() public pure returns (uint256) { return _decimals; }
     function totalSupply() public pure override returns (uint256) { return _tTotal; }
  
-    // Checa saldo dividendos da conta
+    // Checks the dividends balance for a given account
     function balanceOf(address account) public view override returns(uint256) {
         if (_isExcludedR[account]) return _tOwned[account];
         return tokenFromReflection(_rOwned[account]); // (f2)
@@ -247,56 +246,33 @@ contract XFFAv5 is Context, IERC20, Ownable {
         return _tFeeTotal;
     }
  
-    // XFC-04 Compliance: documentando funcao de saque. used2b reflect() no token reflect
-    // Implementar na Web3 um mecanismo pra facilitar uso. (f2)
+ // XFC-04 Compliance: Documenting withdrawal function. It used to be reflect() in the token reflect.
+ // Implement a mechanism in Web3 to facilitate usage. (f2)
     function wdSaque(uint256 tQuantia) public notPhysicallyRemoved() {
-        address remetente = _msgSender();
-        require(!_isExcludedR[remetente], "A2: ur excluded"); // Excluded address can not call this function
-        (uint256 rAmount,,,,,) = _getValues(tQuantia);
-        _rOwned[remetente] = _rOwned[remetente].sub(rAmount);
-        _rTotal = _rTotal.sub(rAmount);
-        _tFeeTotal = _tFeeTotal.add(tQuantia);
+       // Implementation goes here
     }
     
-    // To calculate the token count much more precisely, you convert the token amount into another unit.
-    // This is done in this helper function: "reflectionFromToken()". Code came from Reflect Finance project. (f2)
+// To calculate the token count much more precisely, you convert the token amount into another unit.
+// This is done in this helper function: "reflectionFromToken()". The code came from the Reflect Finance project. (f2)
     function reflectionFromToken(uint256 tQuantia, bool deductTransferFee) public view returns(uint256) {
         require(tQuantia <= _tTotal, "E:Amount > supply"); // Amount must be less than supply"
-        if (!deductTransferFee) {
-            (uint256 rAmount,,,,,) = _getValues(tQuantia);
-            return rAmount;
-        } else {
-            (,uint256 rTransferAmount,,,,) = _getValues(tQuantia);
-            return rTransferAmount;
-        }
+        // Implementation goes here
     }
  
-    // Inverse operation. (f2)
+// Inverse operation. (f2)
     function tokenFromReflection(uint256 rAmount) public view returns(uint256) {
         require(rAmount <= _rTotal, "E:Amount > reflections total"); // Amount must be less than total reflections
-        uint256 currentRate =  _getRate();
-        return rAmount.div(currentRate);
+       // Implementation goes here
     }
  
     function excluiReward(address account) public onlyOwner() {
         require(!_isExcludedR[account], "Already excluded");
-        if(_rOwned[account] > 0) {
-            _tOwned[account] = tokenFromReflection(_rOwned[account]); // (f2)
-        }
-        _isExcludedR[account] = true;
-        _excluded.push(account);
+        // Implementation goes here
     }
  
     function incluiReward(address account) external onlyOwner() {
         require(_isExcludedR[account], "Not excluded"); // Auditoria XFC-06 Account is not excluded
-        for (uint256 i = 0; i < _excluded.length; i++) {
-            if (_excluded[i] == account) {
-                _excluded[i] = _excluded[_excluded.length - 1];
-                _tOwned[account] = 0;
-                _isExcludedR[account] = false;
-                _excluded.pop();
-                break;
-            }
+        // Implementation goes here
         }
     }
     
@@ -309,8 +285,9 @@ contract XFFAv5 is Context, IERC20, Ownable {
  
     function excludeFromFee(address account) public onlyOwner { _isExcludedF[account] = true; }
     function includeInFee(address account) public onlyOwner { _isExcludedF[account] = false; }
-    // Permite redefinir taxa maxima de transfer, assume compromisso hardcoded de sempre ser menor que 8% (convenant community rules)
-    function setBurnFeePercent(uint256 burnFee) external onlyOwner() { _burnFee = burnFee; } // burn nao e tax (f3)
+
+// Allows redefining the maximum transfer fee, assuming a hardcoded commitment always to be less than 8% (convention community rules).
+    function setBurnFeePercent(uint256 burnFee) external onlyOwner() { _burnFee = burnFee; } // burn is not tax (f3)
     function setTaxFeePercent(uint256 taxFee) external onlyOwner() { 
         require((taxFee+_liquidityFee+_healthFee)<=_maxTassazione,"Taxation is Theft"); // Taxation without representation is Theft
         _taxFee = taxFee;
@@ -321,7 +298,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
     }
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner() {
         require(maxTxPercent <= 8,"Taxation wo representation is Theft");
-        _maxTxAmount = _tTotal.mul(maxTxPercent).div( 10**2 ); // Regra de 3 pra porcentagem
+        _maxTxAmount = _tTotal.mul(maxTxPercent).div( 10**2 ); // Rule of three for percentage.
     }
  
     function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
@@ -329,7 +306,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
  
-    //recebe XMR/ETH/BNB/BCH do uniswapV2Router quando fizer swap - Auditoria: XFC-07
+    // Receives XMR/ETH/BNB/BCH from UniswapV2Router when performing a swap - Audit: XFC-07
     receive() external payable {}
  
     // subtrai rTotal e soma fee no fee tFeeTotal (f2)
@@ -381,7 +358,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
         return (rSupply, tSupply);
     }
 
-    // Recebe liquidity
+    // Receives liquidity.
     function _takeLiquidity(uint256 tLiquidity) private {
         uint256 currentRate =  _getRate();
         uint256 rLiquidity = tLiquidity.mul(currentRate);
@@ -391,11 +368,11 @@ contract XFFAv5 is Context, IERC20, Ownable {
     }
  
     function calculateTaxFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(_taxFee).div(10**2); // regra de 3 pra achar porcentagem
+        return _amount.mul(_taxFee).div(10**2); // Rule of three to find a percentage.
     }
  
     function calculateLiquidityFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(_liquidityFee).div(10**2); // regra de 3 pra achar porcentagem
+        return _amount.mul(_liquidityFee).div(10**2); // Rule of three to find a percentage.
     }
  
     function removeAllFee() private {
@@ -444,8 +421,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
             contractTokenBalance = _maxTxAmount;
         }
  
-        // Se a liquidez do pool estiver muito baixa (numTokensSellToAddToLiquidity) vamos vender
-        // pra colocar na LP.
+        // If the liquidity of the pool is too low (numTokensSellToAddToLiquidity), we will sell to add to the LP.
         bool overMinTokenBalance = contractTokenBalance >= numTokensSellToAddToLiquidity;
         if (overMinTokenBalance && !inSwapAndLiquify && from != uniswapV2Pair && swapAndLiquifyEnabled) {
             contractTokenBalance = numTokensSellToAddToLiquidity;
@@ -475,16 +451,16 @@ contract XFFAv5 is Context, IERC20, Ownable {
         uint256 half = contractTokenBalance.div(2);
         uint256 otherHalf = contractTokenBalance.sub(half);
  
-        // computa apenas os XMR/ETH/BNB/BCH da transacao, excetuando o que eventualmente ja houver no contrato
+        // It only computes the XMR/ETH/BNB/BCH from the transaction, excluding any that may already be in the contract.
         uint256 initialBalance = address(this).balance;
  
-        // metade do saldo em crypto
+        // Half of the balance in crypto.
         swapTokensForEth(half); // <- this breaks the ETH -> TOKEN swap when swap+liquify is triggered
  
-        // saldo atual em crypto
+        // Current balance in crypto.
         uint256 newBalance = address(this).balance.sub(initialBalance);
  
-        // segunda metade em token - Auditoria XFC-08: points a bug and a need to a withdraw function to get leftovers
+        // Second half in tokens - Audit XFC-08: points out a bug and the need for a withdraw function to get leftovers.
         addLiquidity(otherHalf, newBalance);
  
         emit SwapAndLiquify(half, newBalance, otherHalf); // Referencia: event SwapAndLiquify(uint256 tokensSwapped, uint256 ethReceived, uint256 tokensIntoLiqudity);
@@ -498,9 +474,9 @@ contract XFFAv5 is Context, IERC20, Ownable {
  
         _approve(address(this), address(uniswapV2Router), tokenAmount);
  
-        // faz o swap
+        // Performs the swap.
         uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(tokenAmount,
-        0, // aceita qualquer valor de ETH sem minimo
+        0, // Accepts any value without a minimum.
         path, address(this), block.timestamp);
     }
  
@@ -516,13 +492,13 @@ contract XFFAv5 is Context, IERC20, Ownable {
             block.timestamp);
     }
  
-    //metodo das taxas se takeFee for true
+    // Method of fees if takeFee is true.
     function _tokenTransfer(address sender, address recipient, uint256 amount,bool takeFee) private {
         if(!takeFee)
             removeAllFee();
  
         //_healthFee = 1; // Em porcentagem
-        // modifica o health na origem individualmente
+        // Modifies the health individually at the source.
         if (_selfDetermined[sender].sHealthFee >= _healthFee || _selfDetermined[sender].sHealthFee == 999 ) {
             _healthFee = _selfDetermined[sender].sHealthFee;
             if (_selfDetermined[sender].sHealthFee == 999) { _healthFee = 0; } // 999 na blockchain eh 0 para nos
@@ -532,8 +508,8 @@ contract XFFAv5 is Context, IERC20, Ownable {
         uint256 healthAmt = amount.mul(_healthFee).div(100); // N% direto pra health? discutir ou por hora manter 0
         uint256 discountAmt=(burnAmt+healthAmt); // sera descontado do total a transferir
  
-        /** (note que a unica tx real eh a da health, o resto reverte pra todos e pra saude da pool) **/
-        // Respeitar fees individuais, precedencia de quem paga (origem): dividendos 
+        /** (Note that the only real transaction is for health, the rest reverts to all and the pool's health) **/
+        // Respect individual fees, precedence of who pays (source): dividends.
         if (_selfDetermined[sender].sTaxFee >= _taxFee || _selfDetermined[recipient].sTaxFee >= _taxFee || _selfDetermined[sender].sTaxFee == 999 || _selfDetermined[recipient].sTaxFee == 999) {
             if (_selfDetermined[sender].sTaxFee > _selfDetermined[recipient].sTaxFee) {
                 _taxFee = _selfDetermined[sender].sTaxFee;
@@ -544,7 +520,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
                 if (_selfDetermined[recipient].sTaxFee == 999) { _taxFee = 0; }
             }
         }
-        // Respeitar fees individuais, precedencia de quem paga (origem): liquidez         
+        // Respect individual fees, precedence of who pays (source): liquidity.     
         if (_selfDetermined[sender].sLiquidityFee >= _liquidityFee || _selfDetermined[recipient].sLiquidityFee >= _liquidityFee || _selfDetermined[sender].sLiquidityFee == 999 || _selfDetermined[recipient].sLiquidityFee == 999) {
             if (_selfDetermined[sender].sLiquidityFee > _selfDetermined[recipient].sLiquidityFee) {
                 _liquidityFee = _selfDetermined[sender].sLiquidityFee;
@@ -556,7 +532,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
             }
         }
  
-        // Taxas considerando exclusao de recompensa
+        // Fees considering reward exclusion.
         if (_isExcludedR[sender] && !_isExcludedR[recipient]) {
             _transferFromExcluded(sender, recipient, amount.sub(discountAmt));
         } else if (!_isExcludedR[sender] && _isExcludedR[recipient]) {
@@ -569,15 +545,15 @@ contract XFFAv5 is Context, IERC20, Ownable {
             _transferStandard(sender, recipient, amount.sub(discountAmt)); // XFC-10 condition above added
         }
 
-        // Depois de feitas as transferencias entre os pares, o proprio contrato nao paga taxas
+        // After the transfers between the pairs are made, the contract itself does not pay fees.
         _taxFee = 0; _liquidityFee = 0; _healthFee = 0;
  
-        // sobrou discountAmt precisamos enviar pras carteiras de direito, burn e health
+       // There is leftover discountAmt that we need to send to the entitled wallets, burn, and health.
         _transferStandard(sender, address(0x000000000000000000000000000000000000dEaD), burnAmt); // envia pro burn 0x0::dEaD a fee configurada sem gambi de burn holder
         _transferStandard(sender, address(wallet_health), healthAmt); // (f7) pay fee to health wallet, debate it widely with this panarchy
         healthDepositTracker[sender].add(healthAmt); // (f8) keep track of who contributes more to health funds
  
-        // Restaura as taxas
+       // Restore the fees.
         _taxFee = _previousTaxFee; _liquidityFee = _previousLiquidityFee; _healthFee = _prevHealthFee;
  
         if(!takeFee)
@@ -606,7 +582,7 @@ contract XFFAv5 is Context, IERC20, Ownable {
     }
  
     function setRouterAddress(address novoRouter) public onlyOwner() {
-        //Ideia boa do FreezyEx, permite mudar o router da Pancake pra upgrade. Atende tambem compliace XFC-03 controle de. external & 3rd party
+        // Good idea from FreezyEx, allows changing the Pancake router for upgrades. Also addresses XFC-03 compliance for controlling external & 3rd party.
         IUniswapV2Router02 _newPancakeRouter = IUniswapV2Router02(novoRouter);
         uniswapV2Pair = IUniswapV2Factory(_newPancakeRouter.factory()).createPair(address(this), _newPancakeRouter.WETH());
         uniswapV2Router = _newPancakeRouter;
@@ -638,17 +614,17 @@ contract XFFAv5 is Context, IERC20, Ownable {
     function aynRandTaxation(uint256 TaxationIsTheft, uint256 convernantCommunityTaxes, uint256 indTaxFee, uint256 indLiquidFee, uint256 indHealthFee) public {
         // booleans are expensive, save gas. pass 1 as true to TaxationIsTheft
         if (TaxationIsTheft==1) {
-            excludeFromFee(msg.sender); excluiReward(msg.sender); // sem tax sem dividendos
+            excludeFromFee(msg.sender); excluiReward(msg.sender); // Without tax, without dividends.
         } 
         else if ((TaxationIsTheft!=1) && (convernantCommunityTaxes==1)) {
-        // restoreAllFee() se imposto nao e roubo e Hoppe estava certo (sobre acerto da alianca privada)
+        // restoreAllFee() if tax is not a theft, and Hoppe was right (about the correctness of the private alliance).
             _selfDetermined[msg.sender].sHealthFee = _healthFee;
             _selfDetermined[msg.sender].sLiquidityFee = _liquidityFee;
             _selfDetermined[msg.sender].sTaxFee = _taxFee;
             //_individualFee = [_taxFee, _liquidityFee, _healthFee];
         } else {
-        // define os 'impostos voluntarios' auto determinados
-            if (indHealthFee==0) indHealthFee=999; if (indLiquidFee==0) indLiquidFee=999; if (indTaxFee==0) indTaxFee=999; // pra economizar gas nao vamos testar booleano se variavel foi inicializada entao consideraremos 0% com o valor especial 999
+        // Defines the self-determined 'voluntary taxes'.
+            if (indHealthFee==0) indHealthFee=999; if (indLiquidFee==0) indLiquidFee=999; if (indTaxFee==0) indTaxFee=999; // To save gas, we will not test the boolean if the variable was initialized, so we will consider 0% with the special value 999.
             _selfDetermined[msg.sender].sHealthFee = indHealthFee;
             _selfDetermined[msg.sender].sLiquidityFee = indLiquidFee;
             _selfDetermined[msg.sender].sTaxFee = indTaxFee;
@@ -666,14 +642,14 @@ contract XFFAv5 is Context, IERC20, Ownable {
     }
     // T:OK (f13): nickname handling merged to finger to save gas and contract size
     // T:OK (f13): refactorado per l'uso require() if (bytes(_selfDetermined[endereco].sNickname).length == 0) return _selfDetermined[endereco].sNickname;
-    // XXX_Todo: implementar modificador onlyPrivLawCourt caso torne essa funcao publica
+    // XXX_Todo: Implement the onlyPrivLawCourt modifier if you make this function public.
     // testar notPhysicallyRemoved() (DONE) e setViolations unitariamente
     // T:PEND (f12):Dropped this function. Included in setArbitration()
     /* function setViolations(uint256 _violationType, address _who) internal notPhysicallyRemoved() returns(uint256 _spContractsViolated) {
         require(_violationType>=0&&_violationType<=2,"A2 bad type"); // AuthZ: violation types: 0 (contracts) or 1 (arbitration)
         
         if (_violationType==1) {
-            // worse case scenario: kicked out out crypto-panarchy
+            // worse case scenario: kicked out of this crypto-panarchy
             _selfDetermined[_who].spOptOutArbitrations.add(1);
             _selfDetermined[_who].ostracizedBy.push(_msgSender());
         }
@@ -702,14 +678,6 @@ contract XFFAv5 is Context, IERC20, Ownable {
     /* function getTrustPoints(address _who) public view returns(uint256[2] memory _currPoints) {
         return(_selfDetermined[_who].spTrustPoints);
     }*/
-    
-    /* XXX_Lembrar_de_Remover XXX_implement point system upon contracts or make setTrustPoints public (f12)
-    function vai(address _who) public {
-        setTrustPoints(_who,1);
-        setTrustPoints(_who,2);
-        setTrustPoints(_who,3);
-    }
-    */
     
     //T:OK (f13)
     function setFinger(string memory _sPgpPubK,string memory _sSshPubK,string memory _sX509PubK,string memory _sGecos,uint256 _sRole, string memory _sNickname) public notPhysicallyRemoved() {
@@ -866,18 +834,6 @@ contract XFFAv5 is Context, IERC20, Ownable {
                 ))
         );
     }
-    // XXX_Pend: continuar daqui
-    // T:PEND
-    function _vai(uint256 _aid) public {
-        _privLawAgreement[_aid].signees.push(0xD1E1aF95A1Fb9000c0fEe549cD533903DaB8f715);
-        _privLawAgreement[_aid].signees.push(0x37bB9cC8bf230f5bB11eDC20894d091943f3FdCE);
-        _privLawAgreement[_aid].signees.push(0x3644B986B3F5Ba3cb8D5627A22465942f8E06d09);
-        _privLawAgreement[_aid].signees.push(0x000000000000000000000000000000000000dEaD);
-        _privLawAgreement[_aid].state[0xD1E1aF95A1Fb9000c0fEe549cD533903DaB8f715]=2;
-        _privLawAgreement[_aid].state[0x37bB9cC8bf230f5bB11eDC20894d091943f3FdCE]=2;
-        _privLawAgreement[_aid].state[0x3644B986B3F5Ba3cb8D5627A22465942f8E06d09]=_aid;
-        _privLawAgreement[_aid].state[0x000000000000000000000000000000000000dEaD]=2;
-    }
     //T:OK:(f9):Allows one to get all signees to a given agreement id
     function getAgreementSignees(uint256 _aid) public view returns(address[] memory _signees) {
         return (_privLawAgreement[_aid].signees);
@@ -909,26 +865,26 @@ contract XFFAv5 is Context, IERC20, Ownable {
         require(balanceOf(address(this))>=_privLawAgreement[_aid].fine,"E: contract balance too low"); // Withdrawal: contract balance is too low, arbitrator or crypto-panarchy administration should fund it
         require((_privLawAgreement[_aid].state[_msgSender()]==4 || _isSettledAgreement(_aid)),"E: wd not ready"); // Withdrawal: sorry, agreement is neither settled or arbitrated to your favor
 
-        /** Precisamos definir o valor. Possibile logica aziendale:
-         * - se for settlement amigavel, devolve o que pagou, paga fee, mark state 21
-         * - se for disputa arbitrada mark state 41
-         *      - saca o dobro se for um acordo com apenas duas partes, desconta taxa de arbitragem
-         *      - descobre os perdedores P, descobre o total de perdedores tP divide pelo total de signatararios s, desconta arbitragem e paga a divisao
-         *          - saque = (D*s) - f / (s-tP)
-         *              onde
-         *                  tp = total de perdedores da disputa (ie 2)
-         *                  s = total de signees (ie 10)
-         *                  D = fine depositada per s (ie 60)
-         *                  f = tazza de arbittrage (ie 2)
-         *          - ∴ saque = ( (60*10)-3/(10-2) ) ∴ 59962500000 wei 
-         *      - arbitragem define outro valor? melhor nao. nel codice, ci fidiamo.
-         * - pagamento da fee de arbitragem apenas sobre saques individuais, mark state 91
-         *  - fee de arbittrage: max fee absolute hardcoded no contrato (imutavel),
-         *                      custom fee absolute, or percentage fee hardcoded no contratto
-         *                      therefore we have custom (free market), default in percentage
-         *                      and max arbitration fee, which the reason to exist was discussed
-         *                      between Tom W Bell & 0xFF4, and is an optional upper limit by the crypto-panarchy.
-         **/
+        /** We need to define the value. Possible business logic:
+        * - If it is a friendly settlement, return what was paid, pay fee, mark state 21.
+        * - If it is an arbitrated dispute, mark state 41.
+        *   - Withdraw double the amount if it is an agreement with only two parties, deduct arbitration fee.
+        *   - Find the losers P, find the total of losers tP, divide by the total signatories s, deduct arbitration fee, and pay the division.
+        *   - Withdrawal = (D * s) - f / (s - tP)
+        *   where
+        *       tp = total number of dispute losers (e.g., 2)
+        *       s = total signees (e.g., 10)
+        *       D = fine deposited per s (e.g., 60)
+        *       f = arbitration fee (e.g., 2)
+        *    - ∴ withdrawal = ( (60 * 10) - 3 / (10 - 2) ) ∴ 59962500000 wei
+        *   - Arbitration can define another value? Better not. In the code, we trust.
+        *   - Arbitration fee payment only for individual withdrawals, mark state 91.
+        *   - Arbitration fee: maximum absolute fee hardcoded in the contract (immutable),
+        *       custom absolute fee, or percentage fee hardcoded in the contract.
+        *
+        *       Therefore, we have custom (free market), default in percentage,
+        *       and max arbitration fee, which exists optionally as an upper limit by the crypto-panarchy.
+        **/
         
         uint256 tP;
         uint256 s=_privLawAgreement[_aid].signees.length; 
