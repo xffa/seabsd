@@ -1,6 +1,6 @@
 Preamble to the Constitution of "Cypher-Panarchy" - A Constitution as Code
 
-We, the self-sovereign individuals of this “Cypher-Panarchy," embrace the revolutionary ideal of 
+We, the self-sovereign individuals of this “Cypher-Panarchy," embrace the nouveau radical ideal of 
 "Constitution as Code," recognizing the paramount importance of individual self-determination, 
 explicit consent, and the indomitable values cypherpunks have been safeguarding, namely individual 
 privacy and challenging tyrannical governance through potent cryptography and weaponized defensive 
@@ -8,8 +8,7 @@ technology.
 
 With the purpose of creating a sovereign society founded on freedom, privacy, and the right to 
 choose our political destinies, we hereby establish this Constitution as a resilient and immutable 
-smart contract, empowered by the name "Cypher-Panarchy" sometimes referred as 
-“Crypto-Panarchy”.
+smart contract, empowered by the name "Cypher-Panarchy" sometimes referred as  “Crypto-Panarchy”.
 
 In the spirit of de Puydt’s Panarchy, we cherish the right of every individual to freely opt-in 
 or opt-out of diverse and overlapping political systems, ensuring their voices are heard, 
